@@ -1,6 +1,7 @@
 object Versions {
     val junit = "5.2.0"
     val strikt = "0.11.2"
+    val commonscsv = "1.5"
 }
 
 plugins {
@@ -19,6 +20,7 @@ tasks.getByPath("test").doFirst({
 
 dependencies {
     compile(kotlin("stdlib-jdk8"))
+    compile("org.apache.commons:commons-csv:${Versions.commonscsv}")
 
     testCompile("io.strikt:strikt-core:${Versions.strikt}")
     testImplementation("org.junit.jupiter:junit-jupiter-api:${Versions.junit}")
