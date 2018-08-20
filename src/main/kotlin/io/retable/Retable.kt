@@ -5,10 +5,9 @@ import org.apache.poi.ss.usermodel.Row
 import java.io.InputStream
 import java.io.Reader
 import org.apache.poi.ss.usermodel.WorkbookFactory
-import java.util.Map
 
 
-class Retable(val columns:List<RetableColumn>,
+class Retable(val columns:RetableColumns,
                 val records:Sequence<RetableRecord>) {
     companion object {
         fun csv() = RetableCSVParser()
@@ -35,7 +34,7 @@ class RetableExcelReader {
         lineNumber++
 
         val records = object : Iterator<RetableRecord> {
-            private var rowNumber: Long = 0
+            private var recordNumber: Long = 0
             private var row: Row? = null
 
             override fun hasNext(): Boolean {
@@ -43,7 +42,7 @@ class RetableExcelReader {
                     row = rowIterator.next()
                     lineNumber++
                     if (!row!!.getCell(0).stringCellValue.trim().isEmpty()) {
-                        rowNumber++
+                        recordNumber++
                         return true
                     } else {
                         row = null // don't keep current empty row in our state
@@ -58,7 +57,7 @@ class RetableExcelReader {
                         throw IllegalStateException("no more rows")
                     }
                 }
-                return RetableRecord(rowNumber, lineNumber,
+                return RetableRecord(columns, recordNumber, lineNumber,
                         row!!.cellIterator().asSequence().map { it.stringCellValue }.toList())
             }
         }.asSequence()
@@ -101,7 +100,7 @@ class RetableCSVParser {
             override fun next(): RetableRecord {
                 val next = iterator.next()
 
-                return RetableRecord(next.recordNumber, lineNumber + 1, next.toList())
+                return RetableRecord(columns, next.recordNumber, lineNumber + 1, next.toList())
             }
         }.asSequence()
 
@@ -109,13 +108,22 @@ class RetableCSVParser {
     }
 }
 
+typealias RetableColumns = List<RetableColumn>
+
 data class RetableColumn(val name:String) {
 
 }
 
-data class RetableRecord(val rowNumber: Long,
+data class RetableRecord(val columns: RetableColumns,
+                         val recordNumber: Long,
                          val lineNumber: Long,
                          val rawData: List<String>
                          ) {
-
+    operator fun get(c:String):String? {
+        return columns.mapIndexed({index, column -> RetableData(column, rawData[index])})
+                .find { it.column.name == c }
+                ?.let { it.value }
+    }
 }
+
+data class RetableData(val column: RetableColumn, val value:String)
