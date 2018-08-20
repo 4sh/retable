@@ -1,6 +1,7 @@
 package io.retable
 
 import org.junit.jupiter.api.Test
+import strikt.api.Assertion
 import strikt.api.expect
 import strikt.assertions.containsExactly
 import java.io.StringReader
@@ -15,9 +16,9 @@ class RetableTest {
             Victor,Hugo
         """.trimIndent()
 
-        val list = Retable.csv().parse(StringReader(csv)).toList()
+        val retable = Retable.csv().parse(StringReader(csv))
 
-        expect(list).containsExactly(
+        expect(retable).map(Retable::records).containsExactly(
                 RetableRecord(1, 2, listOf("Xavier", "Hanin")),
                 RetableRecord(2, 3, listOf("Alfred", "Dalton")),
                 RetableRecord(3, 4, listOf("Victor", "Hugo"))
@@ -26,12 +27,18 @@ class RetableTest {
 
     @Test
     fun `should read simple xlsx with default settings`() {
-        val list = Retable.excel().read(RetableTest::class.java.getResourceAsStream("/simple_data.xlsx")).toList()
-
-        expect(list).containsExactly(
+        val retable = Retable.excel().read(
+                "/simple_data.xlsx".resourceStream())
+        expect(retable).map(Retable::records).containsExactly(
                 RetableRecord(1, 2, listOf("Xavier", "Hanin")),
                 RetableRecord(2, 3, listOf("Alfred", "Dalton")),
                 RetableRecord(3, 4, listOf("Victor", "Hugo"))
         )
     }
+
+
+    // helper extensions
+    fun String.resourceStream() = RetableTest::class.java.getResourceAsStream(this)
+    fun <T : Sequence<E>, E> Assertion.Builder<T>.containsExactly(vararg elements: E): Assertion.Builder<List<E>>
+     = this.map { it.toList() }.containsExactly(*elements)
 }

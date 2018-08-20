@@ -4,14 +4,12 @@ import org.apache.commons.csv.CSVFormat
 import org.apache.poi.ss.usermodel.Row
 import java.io.InputStream
 import java.io.Reader
-import java.io.File
 import org.apache.poi.ss.usermodel.WorkbookFactory
-import org.apache.poi.ss.usermodel.Workbook
 
 
 
 
-class Retable {
+class Retable(val records:Sequence<RetableRecord>) {
     companion object {
         fun csv() = RetableCSVParser()
         fun excel() = RetableExcelReader()
@@ -19,7 +17,7 @@ class Retable {
 }
 
 class RetableExcelReader {
-    fun read(input:InputStream):Sequence<RetableRecord> {
+    fun read(input:InputStream):Retable {
         val workbook = WorkbookFactory.create(input)
 
         val sheet = workbook.getSheetAt(0)
@@ -30,7 +28,7 @@ class RetableExcelReader {
         val header = rowIterator.next()
         lineNumber++
 
-        return object: Iterator<RetableRecord> {
+        return Retable(object: Iterator<RetableRecord> {
             private var rowNumber:Long = 0
             private var row: Row? = null
 
@@ -57,7 +55,7 @@ class RetableExcelReader {
                 return RetableRecord(rowNumber, lineNumber,
                         row!!.cellIterator().asSequence().map { it.stringCellValue }.toList())
             }
-        }.asSequence()
+        }.asSequence())
     }
 }
 
@@ -70,11 +68,11 @@ class RetableCSVParser {
      * Note that input is consumed when sequence is consumed, if the end is not reached the reader
      * should be closed.
      */
-    fun parse(reader:Reader):Sequence<RetableRecord> {
+    fun parse(reader:Reader):Retable {
         val parse = format.parse(reader)
         val iterator = parse.iterator()
 
-        return object: Iterator<RetableRecord> {
+        return Retable(object: Iterator<RetableRecord> {
             var lineNumber:Long = 0
 
             override fun hasNext(): Boolean {
@@ -88,7 +86,7 @@ class RetableCSVParser {
 
                 return RetableRecord(next.recordNumber, lineNumber + 1, next.toList())
             }
-        }.asSequence()
+        }.asSequence())
     }
 }
 
