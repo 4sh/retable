@@ -5,11 +5,11 @@ import org.apache.poi.ss.usermodel.Row
 import java.io.InputStream
 import java.io.Reader
 import org.apache.poi.ss.usermodel.WorkbookFactory
+import java.util.Map
 
 
-
-
-class Retable(val records:Sequence<RetableRecord>) {
+class Retable(val columns:List<RetableColumn>,
+                val records:Sequence<RetableRecord>) {
     companion object {
         fun csv() = RetableCSVParser()
         fun excel() = RetableExcelReader()
@@ -26,17 +26,23 @@ class RetableExcelReader {
 
         var lineNumber:Long = 0
         val header = rowIterator.next()
+
+        val columns = header.cellIterator().asSequence()
+                .map { it.stringCellValue }
+                .map { RetableColumn(it) }
+                .toList()
+
         lineNumber++
 
-        return Retable(object: Iterator<RetableRecord> {
-            private var rowNumber:Long = 0
+        val records = object : Iterator<RetableRecord> {
+            private var rowNumber: Long = 0
             private var row: Row? = null
 
             override fun hasNext(): Boolean {
                 while (rowIterator.hasNext()) {
                     row = rowIterator.next()
                     lineNumber++
-                    if (! row!!.getCell(0).stringCellValue.trim().isEmpty()) {
+                    if (!row!!.getCell(0).stringCellValue.trim().isEmpty()) {
                         rowNumber++
                         return true
                     } else {
@@ -55,7 +61,9 @@ class RetableExcelReader {
                 return RetableRecord(rowNumber, lineNumber,
                         row!!.cellIterator().asSequence().map { it.stringCellValue }.toList())
             }
-        }.asSequence())
+        }.asSequence()
+
+        return Retable(columns, records)
     }
 }
 
@@ -72,8 +80,17 @@ class RetableCSVParser {
         val parse = format.parse(reader)
         val iterator = parse.iterator()
 
-        return Retable(object: Iterator<RetableRecord> {
-            var lineNumber:Long = 0
+        val headers = parse.headerMap
+        val columns = (0 .. headers.size - 1)
+                .map { index -> headers.entries.find { it.value == index } }
+                .filterNotNull()
+                .map { it.key }
+                .map { RetableColumn(it) }
+                .toList()
+
+
+        val records = object : Iterator<RetableRecord> {
+            var lineNumber: Long = 0
 
             override fun hasNext(): Boolean {
                 // we have to store the line number here, because calling hasNext reads the input
@@ -86,8 +103,14 @@ class RetableCSVParser {
 
                 return RetableRecord(next.recordNumber, lineNumber + 1, next.toList())
             }
-        }.asSequence())
+        }.asSequence()
+
+        return Retable(columns, records)
     }
+}
+
+data class RetableColumn(val name:String) {
+
 }
 
 data class RetableRecord(val rowNumber: Long,

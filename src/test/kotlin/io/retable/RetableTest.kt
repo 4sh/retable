@@ -18,22 +18,36 @@ class RetableTest {
 
         val retable = Retable.csv().parse(StringReader(csv))
 
-        expect(retable).map(Retable::records).containsExactly(
-                RetableRecord(1, 2, listOf("Xavier", "Hanin")),
-                RetableRecord(2, 3, listOf("Alfred", "Dalton")),
-                RetableRecord(3, 4, listOf("Victor", "Hugo"))
-        )
+        expect(retable) {
+            map(Retable::columns).containsExactly(
+                    RetableColumn("first_name"),
+                    RetableColumn("last_name")
+            )
+
+            map(Retable::records).containsExactly(
+                    RetableRecord(1, 2, listOf("Xavier", "Hanin")),
+                    RetableRecord(2, 3, listOf("Alfred", "Dalton")),
+                    RetableRecord(3, 4, listOf("Victor", "Hugo"))
+            )
+        }
     }
 
     @Test
     fun `should read simple xlsx with default settings`() {
         val retable = Retable.excel().read(
                 "/simple_data.xlsx".resourceStream())
-        expect(retable).map(Retable::records).containsExactly(
-                RetableRecord(1, 2, listOf("Xavier", "Hanin")),
-                RetableRecord(2, 3, listOf("Alfred", "Dalton")),
-                RetableRecord(3, 4, listOf("Victor", "Hugo"))
-        )
+        expect(retable) {
+            map(Retable::columns).containsExactly(
+                    RetableColumn("first_name"),
+                    RetableColumn("last_name")
+            )
+
+            map(Retable::records).containsExactly(
+                    RetableRecord(1, 2, listOf("Xavier", "Hanin")),
+                    RetableRecord(2, 3, listOf("Alfred", "Dalton")),
+                    RetableRecord(3, 4, listOf("Victor", "Hugo"))
+            )
+        }
     }
 
 
