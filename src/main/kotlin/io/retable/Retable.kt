@@ -121,8 +121,8 @@ class RetableCSVSupport<T : RetableColumns>(val columns: T) {
 
 abstract class RetableColumns {
     companion object {
-        fun ofNames(names:List<String>) = ofCols(names.mapIndexed { index, s -> RetableColumn<Any>(index, s) }.toList())
-        fun ofCols(cols:List<RetableColumn<Any>>) = ListRetableColumns(cols)
+        fun ofNames(names:List<String>) = ofCols(names.mapIndexed { index, s -> StringRetableColumn(index, s) }.toList())
+        fun ofCols(cols:List<RetableColumn<*>>) = ListRetableColumns(cols)
         val auto = ListRetableColumns(listOf())
     }
 
@@ -145,11 +145,11 @@ abstract class RetableColumns {
     }
 }
 
-class ListRetableColumns(private val cols:List<RetableColumn<Any>>):RetableColumns() {
-    override fun list(): List<RetableColumn<Any>> = cols
+class ListRetableColumns(private val cols:List<RetableColumn<*>>):RetableColumns() {
+    override fun list(): List<RetableColumn<*>> = cols
 }
 
-open class RetableColumn<T>(val index:Int, val name:String) {
+abstract class RetableColumn<T>(val index:Int, val name:String) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is RetableColumn<*>) return false
@@ -170,10 +170,16 @@ open class RetableColumn<T>(val index:Int, val name:String) {
         return "RetableColumn(index=$index, name='$name')"
     }
 
+    abstract fun getFromRaw(raw:String):T
 
 }
 
-class StringRetableColumn(index:Int, name:String) : RetableColumn<String>(index, name)
+class StringRetableColumn(index:Int, name:String) : RetableColumn<String>(index, name) {
+    override fun getFromRaw(raw: String): String = raw
+}
+class IntRetableColumn(index:Int, name:String) : RetableColumn<Int>(index, name) {
+    override fun getFromRaw(raw: String): Int = raw.toInt()
+}
 
 data class RetableRecord(val columns: RetableColumns,
                          val recordNumber: Long,
@@ -187,6 +193,6 @@ data class RetableRecord(val columns: RetableColumns,
     }
 
     operator fun <T> get(c:RetableColumn<T>):T? {
-        return rawData.get(c.index) as T
+        return c.getFromRaw(rawData.get(c.index))
     }
 }

@@ -14,7 +14,7 @@ class RetableTest {
     fun `should list columns`() {
         val cols = object:RetableColumns() {
             val test1 = StringRetableColumn(0, "test1")
-            val test2 = RetableColumn<Int>(1, "test2")
+            val test2 = IntRetableColumn(1, "test2")
             val somethingElse = "test3"
         }
 
@@ -56,15 +56,16 @@ class RetableTest {
     @Test
     fun `should parse simple csv with predefined columns`() {
         val csv = """
-            first_name,last_name
-            Xavier,Hanin
-            Alfred,Dalton
-            Victor,Hugo
+            first_name,last_name,age
+            Xavier,Hanin,41
+            Alfred,Dalton,12
+            Victor,Hugo,88
         """.trimIndent()
 
         val columns = object:RetableColumns() {
             val firstName = StringRetableColumn(0, "first_name")
             val lastName = StringRetableColumn(1, "last_name")
+            val age = IntRetableColumn(2, "age")
         }
 
         val retable = Retable.csv(columns = columns).read(ByteArrayInputStream(csv.toByteArray(Charsets.UTF_8)))
@@ -74,15 +75,16 @@ class RetableTest {
         val records = retable.records.toList()
 
         expect(records).containsExactly(
-                RetableRecord(columns,1, 2, listOf("Xavier", "Hanin")),
-                RetableRecord(columns,2, 3, listOf("Alfred", "Dalton")),
-                RetableRecord(columns,3, 4, listOf("Victor", "Hugo"))
+                RetableRecord(columns,1, 2, listOf("Xavier", "Hanin", "41")),
+                RetableRecord(columns,2, 3, listOf("Alfred", "Dalton", "12")),
+                RetableRecord(columns,3, 4, listOf("Victor", "Hugo", "88"))
         )
 
         val firstRecord = records[0]
 
         expect(firstRecord[retable.columns.firstName]).isEqualTo("Xavier")
         expect(firstRecord[columns.lastName]).isEqualTo("Hanin")
+        expect(firstRecord[columns.age]).isEqualTo(41)
     }
 
     @Test
@@ -141,11 +143,12 @@ class RetableTest {
             println(retable.columns[0]?.name)      // prints `first_name`
         }
 
-        File(pathToExcelFile).inputStream().use {
+        File(pathToCsvFile).inputStream().use {
             // access data with type safe columns
-            val retable = Retable.excel(columns = object:RetableColumns(){
+            val retable = Retable.csv(columns = object:RetableColumns() {
                 val firstName = StringRetableColumn(0, "first_name")
                 val lastName = StringRetableColumn(1, "last_name")
+                val age = IntRetableColumn(2, "age")
             }).read(it)
 
             // records (rows) are available in a sequence, we convert it to a list for the example
@@ -153,6 +156,10 @@ class RetableTest {
 
             println(records[0][retable.columns.firstName]) // prints `Xavier`
             println(records[0][retable.columns.lastName]) // prints `Hanin`
+
+            // access data from column - type safe
+            val age:Int? = records[0][retable.columns.age]
+            println(age) // prints `41`
         }
 
 
@@ -168,6 +175,7 @@ class RetableTest {
             first_name
             Xavier
             Hanin
+            41
             """.trimIndent() + "\n")
     }
 

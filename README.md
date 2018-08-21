@@ -41,11 +41,12 @@ File("path/to/data.csv").inputStream().use {
     println(retable.columns[0].name)      // prints `first_name`
 }
 
-File("path/to/excel.xslx").inputStream().use {
+File("path/to/data.csv").inputStream().use {
     // access data with type safe columns
-    val retable = Retable.excel(columns = object:RetableColumns(){
+    val retable = Retable.csv(columns = object:RetableColumns() {
         val firstName = StringRetableColumn(0, "first_name")
         val lastName = StringRetableColumn(1, "last_name")
+        val age = IntRetableColumn(2, "age")
     }).read(it)
 
     // records (rows) are available in a sequence, we convert it to a list for the example
@@ -53,6 +54,10 @@ File("path/to/excel.xslx").inputStream().use {
 
     println(records[0][retable.columns.firstName]) // prints `Xavier`
     println(records[0][retable.columns.lastName]) // prints `Hanin`
+
+    // access data from column - type safe
+    val age:Int? = records[0][retable.columns.age]
+    println(age) // prints `41`
 }
 
 ```
