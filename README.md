@@ -107,7 +107,24 @@ File(pathTo("simple_data.csv")).inputStream().use {
 
 ### CSV Options
 
-TO BE IMPLEMENTED
+#### Set charset
+
+```kotlin
+val retable = Retable.csv(options = CSVReadOptions(charset = Charsets.ISO_8859_1)).read(it)
+```
+
+#### Other options
+
+```kotlin
+val retable = Retable.csv(
+                columns = RetableColumns.ofNames(listOf("Prénom", "Nom", "Oeuvre")),
+                options = CSVReadOptions(
+                            delimiter = ';',
+                            quote = '`',
+                            trimValues = true,
+                            firstRecordAsHeader = false
+        )).read(it)
+```
 
 ### Excel Options
 

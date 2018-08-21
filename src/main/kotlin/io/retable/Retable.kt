@@ -8,12 +8,20 @@ import kotlin.reflect.jvm.jvmErasure
 class Retable<T : RetableColumns>(val columns:T,
                 val records:Sequence<RetableRecord>) {
     companion object {
-        fun csv() = csv(RetableColumns.auto)
-        fun <T : RetableColumns> csv(columns:T) = RetableCSVSupport(columns)
+        fun csv(options:CSVReadOptions = CSVReadOptions()) = csv(RetableColumns.auto, options)
+        fun <T : RetableColumns> csv(columns:T, options:CSVReadOptions
+                = CSVReadOptions()) = RetableCSVSupport(columns, options)
+
         fun excel() = excel(RetableColumns.auto)
         fun <T : RetableColumns> excel(columns:T) = RetableExcelSupport(columns)
     }
 }
+
+abstract class ReadOptions(
+        val trimValues:Boolean,
+        val ignoreEmptyLines:Boolean,
+        val firstRecordAsHeader:Boolean
+)
 
 abstract class RetableColumns {
     companion object {
