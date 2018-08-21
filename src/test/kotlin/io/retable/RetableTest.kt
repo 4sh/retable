@@ -6,6 +6,7 @@ import strikt.api.expect
 import strikt.assertions.containsExactly
 import strikt.assertions.isEqualTo
 import java.io.ByteArrayInputStream
+import java.io.File
 
 class RetableTest {
 
@@ -64,6 +65,60 @@ class RetableTest {
                     RetableRecord(columns,3, 4, listOf("Victor", "Hugo"))
             )
         }
+    }
+
+    @Test
+    fun `should basic example work`() {
+        // for test only
+        val pathToExcelFile = "src/test/resources/simple_data.xlsx"
+        val pathToCsvFile = "src/test/resources/simple_data.csv"
+        val out = StringBuilder()
+        fun println(a:Any?) {
+            out.append(a?.toString()?:"null").append("\n")
+        }
+
+        // example
+        File(pathToExcelFile).inputStream().use {
+            // reads data from Excel file
+            val retable = Retable.excel().read(it)
+
+            // table data columns are populated from header in file
+            println(retable.columns[0].name)      // prints `first_name`
+            println(retable.columns[1].name)      // prints `last_name`
+
+            // records (rows) are available in a sequence, we convert it to a list for the example
+            val records = retable.records.toList()
+
+            println(records.size)                 // prints `3`
+            println(records[0].rawData)           // prints `[Xavier, Hanin]`
+            println(records[0].get("first_name")) // prints `Xavier`
+            println(records[0].recordNumber)      // prints `1`
+            // (record numbers are one based, they are intended for humans
+
+            println(records[0].lineNumber)        // prints `2`
+            // line numbers are one based, and count all lines in file
+            // (header, empty lines, comments, ...)
+        }
+
+        File(pathToCsvFile).inputStream().use {
+            // reads data from CSV file
+            val retable = Retable.csv().read(it)
+
+            // exact same api than for excel files can be used for CSV
+            println(retable.columns[0].name)      // prints `first_name`
+        }
+
+        // check example
+        expect(out.toString()).isEqualTo("""
+            first_name
+            last_name
+            3
+            [Xavier, Hanin]
+            Xavier
+            1
+            2
+            first_name
+            """.trimIndent() + "\n")
     }
 
 
