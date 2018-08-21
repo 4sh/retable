@@ -49,15 +49,23 @@ File("path/to/data.csv").inputStream().use {
         val age = IntRetableColumn(2, "age")
     }).read(it)
 
-    // records (rows) are available in a sequence, we convert it to a list for the example
-    val records = retable.records.toList()
+    retable.columns.apply {
+        // using apply on the columns allow to easily access them by their names
+        val records = retable.records.toList()
 
-    println(records[0][retable.columns.firstName]) // prints `Xavier`
-    println(records[0][retable.columns.lastName]) // prints `Hanin`
+        println(records[0][firstName]) // prints `Xavier`
+        println(records[0][lastName]) // prints `Hanin`
 
-    // access data from column - type safe
-    val age:Int? = records[0][retable.columns.age]
-    println(age) // prints `41`
+        // access data from column - type safe
+        val myAge:Int? = records[0][age]
+        println(myAge) // prints `41`
+
+        // you can obviously do things like this
+        println(records
+                .filter { it[age]?:0 > 18 }
+                .map { "Hello ${it[firstName]} ${it[lastName]}" }
+                .joinToString()) // prints `Hello Xavier Hanin, Hello Victor Hugo`
+    }
 }
 
 ```

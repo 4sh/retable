@@ -88,6 +88,31 @@ class RetableTest {
     }
 
     @Test
+    fun `should apply columns`() {
+        val csv = """
+            first_name,last_name,age
+            Xavier,Hanin,41
+            Alfred,Dalton,12
+        """.trimIndent()
+
+        val retable = Retable.csv(columns = object:RetableColumns() {
+            val firstName = StringRetableColumn(0, "first_name")
+            val lastName = StringRetableColumn(1, "last_name")
+            val age = IntRetableColumn(2, "age")
+        }).read(ByteArrayInputStream(csv.toByteArray(Charsets.UTF_8)))
+
+        retable.columns.apply {
+            expect(
+                    retable.records
+                    .filter { it[age]?:0 > 18 }
+                    .map { "Hello ${it[firstName]} ${it[lastName]}" }
+                    .joinToString()
+            ).isEqualTo("Hello Xavier Hanin")
+        }
+    }
+
+
+    @Test
     fun `should read simple xlsx with default settings`() {
         val retable = Retable.excel().read(
                 "/simple_data.xlsx".resourceStream())
@@ -151,15 +176,23 @@ class RetableTest {
                 val age = IntRetableColumn(2, "age")
             }).read(it)
 
-            // records (rows) are available in a sequence, we convert it to a list for the example
-            val records = retable.records.toList()
+            retable.columns.apply {
+                // using apply on the columns allow to easily access them by their names
+                val records = retable.records.toList()
 
-            println(records[0][retable.columns.firstName]) // prints `Xavier`
-            println(records[0][retable.columns.lastName]) // prints `Hanin`
+                println(records[0][firstName]) // prints `Xavier`
+                println(records[0][lastName]) // prints `Hanin`
 
-            // access data from column - type safe
-            val age:Int? = records[0][retable.columns.age]
-            println(age) // prints `41`
+                // access data from column - type safe
+                val myAge:Int? = records[0][age]
+                println(myAge) // prints `41`
+
+                // you can obviously do things like this
+                println(records
+                        .filter { it[age]?:0 > 18 }
+                        .map { "Hello ${it[firstName]} ${it[lastName]}" }
+                        .joinToString()) // prints `Hello Xavier Hanin, Hello Victor Hugo`
+            }
         }
 
 
@@ -176,6 +209,7 @@ class RetableTest {
             Xavier
             Hanin
             41
+            Hello Xavier Hanin, Hello Victor Hugo
             """.trimIndent() + "\n")
     }
 
