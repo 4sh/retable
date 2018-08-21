@@ -10,12 +10,12 @@ import org.apache.poi.ss.usermodel.WorkbookFactory
 class Retable(val columns:RetableColumns,
                 val records:Sequence<RetableRecord>) {
     companion object {
-        fun csv() = RetableCSVParser()
-        fun excel() = RetableExcelReader()
+        fun csv() = RetableCSVSupport()
+        fun excel() = RetableExcelSupport()
     }
 }
 
-class RetableExcelReader {
+class RetableExcelSupport {
     fun read(input:InputStream):Retable {
         val workbook = WorkbookFactory.create(input)
 
@@ -66,7 +66,7 @@ class RetableExcelReader {
     }
 }
 
-class RetableCSVParser {
+class RetableCSVSupport {
     private val format:CSVFormat = CSVFormat.DEFAULT.withFirstRecordAsHeader()
 
     /**
@@ -75,7 +75,7 @@ class RetableCSVParser {
      * Note that input is consumed when sequence is consumed, if the end is not reached the reader
      * should be closed.
      */
-    fun parse(reader:Reader):Retable {
+    fun read(reader:Reader):Retable {
         val parse = format.parse(reader)
         val iterator = parse.iterator()
 

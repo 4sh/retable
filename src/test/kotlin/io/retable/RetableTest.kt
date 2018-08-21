@@ -30,7 +30,7 @@ class RetableTest {
             Victor,Hugo
         """.trimIndent()
 
-        val retable = Retable.csv().parse(StringReader(csv))
+        val retable = Retable.csv().read(StringReader(csv))
         val columns = listOf(
                 RetableColumn("first_name"),
                 RetableColumn("last_name"))
