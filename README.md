@@ -6,69 +6,112 @@ Under the hood it uses Apache commons csv for CSV and Apache POI for Excel / Ope
 
 retable is still very young, and currently has a very limited set of feature, but more are coming.
 
-## Example
+## Usage (Read)
 
-_see `src/test/resources` for data files_
+_Hint: see `src/test/resources/examples` for data files_
 
+
+### Basic Usage (CSV)
+
+Reading a CSV file is very straightforward
 ```kotlin
-File("path/to/excel.xslx").inputStream().use {
-    // reads data from Excel file
-    val retable = Retable.excel().read(it)
-
-    // table data columns are populated from header in file
-    println(retable.columns[0].name)      // prints `first_name`
-    println(retable.columns[1].name)      // prints `last_name`
-
-    // records (rows) are available in a sequence, we convert it to a list for the example
-    val records = retable.records.toList()
-
-    println(records.size)                 // prints `3`
-    println(records[0].rawData)           // prints `[Xavier, Hanin]`
-    println(records[0].get("first_name")) // prints `Xavier`
-    println(records[0].recordNumber)      // prints `1`
-    // (record numbers are one based, they are intended for humans
-
-    println(records[0].lineNumber)        // prints `2`
-    // line numbers are one based, and count all lines in file
-    // (header, empty lines, comments, ...)
+// opens and use an input stream with std kotlin
+File(pathTo("simple_data.csv")).inputStream().use {
+    val hello =
+        Retable.csv().read(it) // read as csv with default settings
+            .records       // access the records sequence
+            .map { it["first_name"] + " " + it["last_name"] } // access data by column name (headers in file)
+            .first()       // sequence is consumed only on call, so getting first record in a large file is fast
+    println(hello)  // prints `Xavier Hanin`
 }
+```
 
-File("path/to/data.csv").inputStream().use {
-    // reads data from CSV file
+### Basic Usage (Excel)
+
+Reading an Excel file is equally simple, and except some configuration options (see later) the API is exactly the same as with CSV!
+```kotlin
+File(pathTo("simple_data.xlsx")).inputStream().use {
+    val hello =
+            Retable.excel().read(it) // read as excel with default settings
+                    .records       // access the records sequence
+                    .map { it["first_name"] + " " + it["last_name"] } // access data by column name (headers in file)
+                    .first()       // sequence is consumed only on call, so getting first record in a large file is fast
+    println(hello)  // prints `Xavier Hanin`
+}
+```
+
+### Accessing column names
+
+By default retable reads column information from file header, and you can access to these columns
+```kotlin
+File(pathTo("simple_data.csv")).inputStream().use {
     val retable = Retable.csv().read(it)
 
-    // exact same api than for excel files can be used for CSV
-    println(retable.columns[0].name)      // prints `first_name`
+    // you can access to the columns
+    val colNames = retable.columns.list().map { it.name }.joinToString()
+
+    println(colNames)      // prints `first_name, last_name, age`
 }
+```
 
-File("path/to/data.csv").inputStream().use {
-    // access data with type safe columns
-    val retable = Retable.csv(columns = object:RetableColumns() {
-        val firstName = StringRetableColumn(c++, "first_name")
-        val lastName = StringRetableColumn(c++, "last_name")
-        val age = IntRetableColumn(c++, "age")
-    }).read(it)
+### Accessing information about the record
 
-    retable.columns.apply {
-        // using apply on the columns allow to easily access them by their names
-        val records = retable.records.toList()
+On each record you have access to some meta information and to the raw data (list of string) of the record
+```kotlin
+File(pathTo("simple_data.csv")).inputStream().use {
+    val record = Retable.csv().read(it)
+            .records.first() // get first record
 
-        println(records[0][firstName]) // prints `Xavier`
-        println(records[0][lastName]) // prints `Hanin`
-
-        // access data from column - type safe
-        val myAge:Int? = records[0][age]
-        println(myAge) // prints `41`
-
-        // you can obviously do things like this
-        println(records
-                .filter { it[age]?:0 > 18 }
-                .map { "Hello ${it[firstName]} ${it[lastName]}" }
-                .joinToString()) // prints `Hello Xavier Hanin, Hello Victor Hugo`
+    record.apply {
+        // on the record you have access to:
+        // - the line number, i.e. the line (in the file) on which the record was found (1 based)
+        // - the record number, i.e. the index of this record among all records (1 based)
+        // - rawData, the list (as string) of each "cell"
+        println("$recordNumber $lineNumber $rawData") // prints `1 2 [Xavier, Hanin, 41]`
     }
 }
-
 ```
+
+### Defining columns
+
+Much more powerful usage can be obtained by defining the expected columns. Providing their index (1 based), their names, and their type, you can then access to the data of each column on each record in a type safe way.
+```kotlin
+File(pathTo("simple_data.csv")).inputStream().use {
+    val retable = Retable
+            .csv(
+            // we can also define the expected columns
+            object:RetableColumns() {
+                // each column is defined as a property on an object
+                // the use of c++ is to easily set the index of each column, not for some '80s language :)
+                val FIRST_NAME = StringRetableColumn(c++, "first_name")
+                val LAST_NAME  = StringRetableColumn(c++, "last_name")
+                // note that the column is typed - here the age is expected to be an Int
+                val AGE        = IntRetableColumn(c++, "age")
+            })
+            .read(it)
+
+    // we will now be able to access data using the predefined columns, we `apply` them for ease of use
+    retable.columns.apply {
+        val hello = retable.records
+                // now we can access the column value on a record by its column
+                // note that both the column (AGE) and its type (Int) are known by the compiler
+                // the direct access to the column with `AGE` is made possible thanks to the `apply`
+                .filter { it[AGE]?:0 > 18 }
+                // see how easy it is to access the fields
+                .map { "Hello ${it[FIRST_NAME]} ${it[LAST_NAME]}" }
+                .joinToString()
+        println(hello)          // prints `Hello Xavier Hanin, Hello Victor Hugo`
+    }
+}
+```
+
+### CSV Options
+
+TO BE IMPLEMENTED
+
+### Excel Options
+
+TO BE IMPLEMENTED
 
 
 ## Installation

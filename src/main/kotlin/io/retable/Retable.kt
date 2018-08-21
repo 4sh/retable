@@ -121,12 +121,12 @@ class RetableCSVSupport<T : RetableColumns>(val columns: T) {
 
 abstract class RetableColumns {
     companion object {
-        fun ofNames(names:List<String>) = ofCols(names.mapIndexed { index, s -> StringRetableColumn(index, s) }.toList())
+        fun ofNames(names:List<String>) = ofCols(names.mapIndexed { index, s -> StringRetableColumn(index + 1, s) }.toList())
         fun ofCols(cols:List<RetableColumn<*>>) = ListRetableColumns(cols)
         val auto = ListRetableColumns(listOf())
     }
 
-    protected var c = 0
+    protected var c = 1
 
     open fun list():List<RetableColumn<*>> = this::class.memberProperties
             .filter { it.returnType.jvmErasure.isSubclassOf(RetableColumn::class) }
@@ -134,7 +134,7 @@ abstract class RetableColumns {
             .filterIsInstance(RetableColumn::class.java)
             .toList()
 
-    operator fun get(index:Int) = list().find { it.index == index }
+    operator fun get(index:Int) = list().find { it.index == index } ?: throw ArrayIndexOutOfBoundsException(index)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -191,10 +191,10 @@ data class RetableRecord(val columns: RetableColumns,
     operator fun get(c:String):String? {
         return columns.list()
                 .find { it.name == c }
-                ?.let { rawData.get(it.index) }
+                ?.let { rawData.get(it.index - 1) }
     }
 
     operator fun <T> get(c:RetableColumn<T>):T? {
-        return c.getFromRaw(rawData.get(c.index))
+        return c.getFromRaw(rawData.get(c.index - 1))
     }
 }
