@@ -5,7 +5,7 @@ import strikt.api.Assertion
 import strikt.api.expect
 import strikt.assertions.containsExactly
 import strikt.assertions.isEqualTo
-import java.io.StringReader
+import java.io.ByteArrayInputStream
 
 class RetableTest {
 
@@ -30,7 +30,7 @@ class RetableTest {
             Victor,Hugo
         """.trimIndent()
 
-        val retable = Retable.csv().read(StringReader(csv))
+        val retable = Retable.csv().read(ByteArrayInputStream(csv.toByteArray(Charsets.UTF_8)))
         val columns = listOf(
                 RetableColumn("first_name"),
                 RetableColumn("last_name"))

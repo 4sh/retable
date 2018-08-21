@@ -3,8 +3,8 @@ package io.retable
 import org.apache.commons.csv.CSVFormat
 import org.apache.poi.ss.usermodel.Row
 import java.io.InputStream
-import java.io.Reader
 import org.apache.poi.ss.usermodel.WorkbookFactory
+import java.io.InputStreamReader
 
 
 class Retable(val columns:RetableColumns,
@@ -75,8 +75,8 @@ class RetableCSVSupport {
      * Note that input is consumed when sequence is consumed, if the end is not reached the reader
      * should be closed.
      */
-    fun read(reader:Reader):Retable {
-        val parse = format.parse(reader)
+    fun read(input:InputStream):Retable {
+        val parse = format.parse(InputStreamReader(input, Charsets.UTF_8))
         val iterator = parse.iterator()
 
         val headers = parse.headerMap
