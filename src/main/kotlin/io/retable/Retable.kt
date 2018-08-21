@@ -126,6 +126,8 @@ abstract class RetableColumns {
         val auto = ListRetableColumns(listOf())
     }
 
+    protected var c = 0
+
     open fun list():List<RetableColumn<*>> = this::class.memberProperties
             .filter { it.returnType.jvmErasure.isSubclassOf(RetableColumn::class) }
             .map { it.call(this) }

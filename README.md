@@ -44,9 +44,9 @@ File("path/to/data.csv").inputStream().use {
 File("path/to/data.csv").inputStream().use {
     // access data with type safe columns
     val retable = Retable.csv(columns = object:RetableColumns() {
-        val firstName = StringRetableColumn(0, "first_name")
-        val lastName = StringRetableColumn(1, "last_name")
-        val age = IntRetableColumn(2, "age")
+        val firstName = StringRetableColumn(c++, "first_name")
+        val lastName = StringRetableColumn(c++, "last_name")
+        val age = IntRetableColumn(c++, "age")
     }).read(it)
 
     retable.columns.apply {
