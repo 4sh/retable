@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test
 import strikt.api.Assertion
 import strikt.api.expect
 import strikt.assertions.containsExactly
+import strikt.assertions.get
 import strikt.assertions.isEqualTo
 import java.io.ByteArrayInputStream
 import java.io.File
@@ -41,6 +42,40 @@ class RetableTest {
                     RetableRecord(columns,3, 4, listOf("Victor", "Hugo"))
             )
         }
+    }
+
+    @Test
+    fun `should parse simple csv with predefined columns`() {
+        val csv = """
+            first_name,last_name
+            Xavier,Hanin
+            Alfred,Dalton
+            Victor,Hugo
+        """.trimIndent()
+
+        val columns = object:RetableColumns() {
+            val firstName = StringRetableColumn(0, "first_name")
+            val lastName = StringRetableColumn(1, "last_name")
+
+            override fun list() = listOf(firstName, lastName)
+        }
+
+        val retable = Retable.csv(columns = columns).read(ByteArrayInputStream(csv.toByteArray(Charsets.UTF_8)))
+
+        expect(retable).map(Retable::columns).map {it.list()}.containsExactly(*columns.list().toTypedArray())
+
+        val records = retable.records.toList()
+
+        expect(records).containsExactly(
+                RetableRecord(columns,1, 2, listOf("Xavier", "Hanin")),
+                RetableRecord(columns,2, 3, listOf("Alfred", "Dalton")),
+                RetableRecord(columns,3, 4, listOf("Victor", "Hugo"))
+        )
+
+        val firstRecord = records[0]
+
+        expect(firstRecord[columns.firstName]).isEqualTo("Xavier")
+        expect(firstRecord[columns.lastName]).isEqualTo("Hanin")
     }
 
     @Test

@@ -10,7 +10,7 @@ import java.io.InputStreamReader
 class Retable(val columns:RetableColumns,
                 val records:Sequence<RetableRecord>) {
     companion object {
-        fun csv() = RetableCSVSupport()
+        fun csv(columns:RetableColumns? = null) = RetableCSVSupport(columns)
         fun excel() = RetableExcelSupport()
     }
 }
@@ -66,7 +66,7 @@ class RetableExcelSupport {
     }
 }
 
-class RetableCSVSupport {
+class RetableCSVSupport(val columns: RetableColumns?) {
     private val format:CSVFormat = CSVFormat.DEFAULT.withFirstRecordAsHeader()
 
     /**
@@ -80,7 +80,7 @@ class RetableCSVSupport {
         val iterator = parse.iterator()
 
         val headers = parse.headerMap
-        val columns = RetableColumns.ofNames(
+        val columns = this.columns?:RetableColumns.ofNames(
                 (0..headers.size - 1)
                     .map { index -> headers.entries.find { it.value == index } }
                     .map { it?.key?:"" }
@@ -109,13 +109,13 @@ class RetableCSVSupport {
 
 abstract class RetableColumns {
     companion object {
-        fun ofNames(names:List<String>) = ofCols(names.mapIndexed { index, s -> RetableColumn(index, s) }.toList())
-        fun ofCols(cols:List<RetableColumn>) = object:RetableColumns() {
-            override fun list(): List<RetableColumn>  = cols
+        fun ofNames(names:List<String>) = ofCols(names.mapIndexed { index, s -> RetableColumn<Any>(index, s) }.toList())
+        fun ofCols(cols:List<RetableColumn<Any>>) = object:RetableColumns() {
+            override fun list(): List<RetableColumn<Any>>  = cols
         }
     }
 
-    abstract fun list():List<RetableColumn>
+    abstract fun list():List<RetableColumn<*>>
 
     operator fun get(index:Int) = list().find { it.index == index }
 
@@ -130,9 +130,25 @@ abstract class RetableColumns {
     }
 }
 
-data class RetableColumn(val index:Int, val name:String) {
+open class RetableColumn<T>(val index:Int, val name:String) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is RetableColumn<*>) return false
 
+        if (index != other.index) return false
+        if (name != other.name) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = index
+        result = 31 * result + name.hashCode()
+        return result
+    }
 }
+
+class StringRetableColumn(index:Int, name:String) : RetableColumn<String>(index, name)
 
 data class RetableRecord(val columns: RetableColumns,
                          val recordNumber: Long,
@@ -143,5 +159,9 @@ data class RetableRecord(val columns: RetableColumns,
         return columns.list()
                 .find { it.name == c }
                 ?.let { rawData.get(it.index) }
+    }
+
+    operator fun <T> get(c:RetableColumn<T>):T? {
+        return rawData.get(c.index) as T
     }
 }
