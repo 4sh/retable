@@ -26,10 +26,10 @@ class RetableExcelSupport {
         var lineNumber:Long = 0
         val header = rowIterator.next()
 
-        val columns = header.cellIterator().asSequence()
-                .map { it.stringCellValue }
-                .map { RetableColumn(it) }
-                .toList()
+        val columns = RetableColumns.ofNames(
+                header.cellIterator().asSequence()
+                    .map { it.stringCellValue }
+                    .toList())
 
         lineNumber++
 
@@ -80,12 +80,11 @@ class RetableCSVSupport {
         val iterator = parse.iterator()
 
         val headers = parse.headerMap
-        val columns = (0 .. headers.size - 1)
-                .map { index -> headers.entries.find { it.value == index } }
-                .filterNotNull()
-                .map { it.key }
-                .map { RetableColumn(it) }
-                .toList()
+        val columns = RetableColumns.ofNames(
+                (0..headers.size - 1)
+                    .map { index -> headers.entries.find { it.value == index } }
+                    .map { it?.key?:"" }
+                    .toList())
 
 
         val records = object : Iterator<RetableRecord> {
@@ -108,9 +107,30 @@ class RetableCSVSupport {
     }
 }
 
-typealias RetableColumns = List<RetableColumn>
+abstract class RetableColumns {
+    companion object {
+        fun ofNames(names:List<String>) = ofCols(names.mapIndexed { index, s -> RetableColumn(index, s) }.toList())
+        fun ofCols(cols:List<RetableColumn>) = object:RetableColumns() {
+            override fun list(): List<RetableColumn>  = cols
+        }
+    }
 
-data class RetableColumn(val name:String) {
+    abstract fun list():List<RetableColumn>
+
+    operator fun get(index:Int) = list().find { it.index == index }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is RetableColumns) return false
+        return other.list() == list()
+    }
+
+    override fun hashCode(): Int {
+        return list().hashCode()
+    }
+}
+
+data class RetableColumn(val index:Int, val name:String) {
 
 }
 
@@ -120,10 +140,8 @@ data class RetableRecord(val columns: RetableColumns,
                          val rawData: List<String>
                          ) {
     operator fun get(c:String):String? {
-        return columns.mapIndexed({index, column -> RetableData(column, rawData[index])})
-                .find { it.column.name == c }
-                ?.let { it.value }
+        return columns.list()
+                .find { it.name == c }
+                ?.let { rawData.get(it.index) }
     }
 }
-
-data class RetableData(val column: RetableColumn, val value:String)

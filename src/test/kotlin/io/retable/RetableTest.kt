@@ -12,9 +12,7 @@ class RetableTest {
 
     @Test
     internal fun `should access data by col name in a row`() {
-        val columns = listOf(
-                RetableColumn("first_name"),
-                RetableColumn("last_name"))
+        val columns = RetableColumns.ofNames(listOf("first_name", "last_name"))
 
         expect(RetableRecord(columns,1, 2, listOf("Xavier", "Hanin"))) {
             map {it["first_name"] }.isEqualTo("Xavier")
@@ -32,12 +30,10 @@ class RetableTest {
         """.trimIndent()
 
         val retable = Retable.csv().read(ByteArrayInputStream(csv.toByteArray(Charsets.UTF_8)))
-        val columns = listOf(
-                RetableColumn("first_name"),
-                RetableColumn("last_name"))
+        val columns = RetableColumns.ofNames(listOf("first_name", "last_name"))
 
         expect(retable) {
-            map(Retable::columns).containsExactly(*columns.toTypedArray())
+            map(Retable::columns).map {it.list()}.containsExactly(*columns.list().toTypedArray())
 
             map(Retable::records).containsExactly(
                     RetableRecord(columns,1, 2, listOf("Xavier", "Hanin")),
@@ -52,12 +48,10 @@ class RetableTest {
         val retable = Retable.excel().read(
                 "/simple_data.xlsx".resourceStream())
 
-        val columns = listOf(
-                RetableColumn("first_name"),
-                RetableColumn("last_name"))
+        val columns = RetableColumns.ofNames(listOf("first_name", "last_name"))
 
         expect(retable) {
-            map(Retable::columns).containsExactly(*columns.toTypedArray())
+            map(Retable::columns).map {it.list()}.containsExactly(*columns.list().toTypedArray())
 
             map(Retable::records).containsExactly(
                     RetableRecord(columns,1, 2, listOf("Xavier", "Hanin")),
@@ -83,8 +77,8 @@ class RetableTest {
             val retable = Retable.excel().read(it)
 
             // table data columns are populated from header in file
-            println(retable.columns[0].name)      // prints `first_name`
-            println(retable.columns[1].name)      // prints `last_name`
+            println(retable.columns[0]?.name)      // prints `first_name`
+            println(retable.columns[1]?.name)      // prints `last_name`
 
             // records (rows) are available in a sequence, we convert it to a list for the example
             val records = retable.records.toList()
@@ -105,7 +99,7 @@ class RetableTest {
             val retable = Retable.csv().read(it)
 
             // exact same api than for excel files can be used for CSV
-            println(retable.columns[0].name)      // prints `first_name`
+            println(retable.columns[0]?.name)      // prints `first_name`
         }
 
         // check example
