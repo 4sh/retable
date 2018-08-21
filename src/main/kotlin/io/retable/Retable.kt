@@ -5,18 +5,23 @@ import org.apache.poi.ss.usermodel.Row
 import java.io.InputStream
 import org.apache.poi.ss.usermodel.WorkbookFactory
 import java.io.InputStreamReader
+import kotlin.reflect.full.isSubclassOf
+import kotlin.reflect.full.memberProperties
+import kotlin.reflect.jvm.jvmErasure
 
 
-class Retable(val columns:RetableColumns,
+class Retable<T : RetableColumns>(val columns:T,
                 val records:Sequence<RetableRecord>) {
     companion object {
-        fun csv(columns:RetableColumns? = null) = RetableCSVSupport(columns)
-        fun excel() = RetableExcelSupport()
+        fun csv() = csv(RetableColumns.auto)
+        fun <T : RetableColumns> csv(columns:T) = RetableCSVSupport(columns)
+        fun excel() = excel(RetableColumns.auto)
+        fun <T : RetableColumns> excel(columns:T) = RetableExcelSupport(columns)
     }
 }
 
-class RetableExcelSupport {
-    fun read(input:InputStream):Retable {
+class RetableExcelSupport<T : RetableColumns>(val columns: T) {
+    fun read(input:InputStream):Retable<T> {
         val workbook = WorkbookFactory.create(input)
 
         val sheet = workbook.getSheetAt(0)
@@ -26,10 +31,14 @@ class RetableExcelSupport {
         var lineNumber:Long = 0
         val header = rowIterator.next()
 
-        val columns = RetableColumns.ofNames(
-                header.cellIterator().asSequence()
-                    .map { it.stringCellValue }
-                    .toList())
+        val columns = if (this.columns is ListRetableColumns && this.columns.list().size == 0) {
+            RetableColumns.ofNames(
+                    header.cellIterator().asSequence()
+                            .map { it.stringCellValue }
+                            .toList())
+        } else {
+            this.columns
+        }
 
         lineNumber++
 
@@ -62,11 +71,11 @@ class RetableExcelSupport {
             }
         }.asSequence()
 
-        return Retable(columns, records)
+        return Retable(columns as T, records)
     }
 }
 
-class RetableCSVSupport(val columns: RetableColumns?) {
+class RetableCSVSupport<T : RetableColumns>(val columns: T) {
     private val format:CSVFormat = CSVFormat.DEFAULT.withFirstRecordAsHeader()
 
     /**
@@ -75,17 +84,20 @@ class RetableCSVSupport(val columns: RetableColumns?) {
      * Note that input is consumed when sequence is consumed, if the end is not reached the reader
      * should be closed.
      */
-    fun read(input:InputStream):Retable {
+    fun read(input:InputStream):Retable<T> {
         val parse = format.parse(InputStreamReader(input, Charsets.UTF_8))
         val iterator = parse.iterator()
 
         val headers = parse.headerMap
-        val columns = this.columns?:RetableColumns.ofNames(
-                (0..headers.size - 1)
-                    .map { index -> headers.entries.find { it.value == index } }
-                    .map { it?.key?:"" }
-                    .toList())
-
+        val columns = if (this.columns is ListRetableColumns && this.columns.list().size == 0) {
+            RetableColumns.ofNames(
+                    (0..headers.size - 1)
+                            .map { index -> headers.entries.find { it.value == index } }
+                            .map { it?.key?:"" }
+                            .toList())
+        } else {
+            this.columns
+        }
 
         val records = object : Iterator<RetableRecord> {
             var lineNumber: Long = 0
@@ -103,19 +115,22 @@ class RetableCSVSupport(val columns: RetableColumns?) {
             }
         }.asSequence()
 
-        return Retable(columns, records)
+        return Retable(columns as T, records)
     }
 }
 
 abstract class RetableColumns {
     companion object {
         fun ofNames(names:List<String>) = ofCols(names.mapIndexed { index, s -> RetableColumn<Any>(index, s) }.toList())
-        fun ofCols(cols:List<RetableColumn<Any>>) = object:RetableColumns() {
-            override fun list(): List<RetableColumn<Any>>  = cols
-        }
+        fun ofCols(cols:List<RetableColumn<Any>>) = ListRetableColumns(cols)
+        val auto = ListRetableColumns(listOf())
     }
 
-    abstract fun list():List<RetableColumn<*>>
+    open fun list():List<RetableColumn<*>> = this::class.memberProperties
+            .filter { it.returnType.jvmErasure.isSubclassOf(RetableColumn::class) }
+            .map { it.call(this) }
+            .filterIsInstance(RetableColumn::class.java)
+            .toList()
 
     operator fun get(index:Int) = list().find { it.index == index }
 
@@ -128,6 +143,10 @@ abstract class RetableColumns {
     override fun hashCode(): Int {
         return list().hashCode()
     }
+}
+
+class ListRetableColumns(private val cols:List<RetableColumn<Any>>):RetableColumns() {
+    override fun list(): List<RetableColumn<Any>> = cols
 }
 
 open class RetableColumn<T>(val index:Int, val name:String) {
@@ -146,6 +165,12 @@ open class RetableColumn<T>(val index:Int, val name:String) {
         result = 31 * result + name.hashCode()
         return result
     }
+
+    override fun toString(): String {
+        return "RetableColumn(index=$index, name='$name')"
+    }
+
+
 }
 
 class StringRetableColumn(index:Int, name:String) : RetableColumn<String>(index, name)

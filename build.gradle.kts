@@ -21,6 +21,7 @@ tasks.getByPath("test").doFirst({
 
 dependencies {
     compile(kotlin("stdlib-jdk8"))
+    compile(kotlin("reflect"))
     compile("org.apache.commons:commons-csv:${Versions.commonscsv}")
     compile("org.apache.poi:poi:${Versions.poi}")
     compile("org.apache.poi:poi-ooxml:${Versions.poi}")
