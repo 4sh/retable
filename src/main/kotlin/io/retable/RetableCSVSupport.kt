@@ -55,6 +55,23 @@ class RetableCSVSupport<T : RetableColumns>(
             this.columns
         }
 
+        val validations = RetableValidations(
+            if (options.firstRecordAsHeader) {
+                // validate headers
+                columns.list()
+                        .map { col ->
+                            headers.entries
+                                    .find { it.value+1 == col.index }
+                                    ?.let { entry ->
+                                        col.headerValidation.validate(entry.key)
+                                    }
+                                    ?: MissingHeaderRule(col).validate(col.name)
+                        }
+            } else {
+                // nothing to validate
+                listOf()
+            })
+
         val records = object : Iterator<RetableRecord> {
             var lineNumber: Long = 0
 
@@ -71,6 +88,6 @@ class RetableCSVSupport<T : RetableColumns>(
             }
         }.asSequence()
 
-        return Retable(columns as T, records)
+        return Retable(columns as T, records, validations)
     }
 }

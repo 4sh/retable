@@ -55,6 +55,6 @@ class RetableExcelSupport<T : RetableColumns>(val columns: T) {
             }
         }.asSequence()
 
-        return Retable(columns as T, records)
+        return Retable(columns as T, records, RetableValidations(listOf()))
     }
 }
