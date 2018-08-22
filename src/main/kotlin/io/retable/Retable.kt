@@ -1,5 +1,6 @@
 package io.retable
 
+import java.io.InputStream
 import kotlin.reflect.full.isSubclassOf
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.jvmErasure
@@ -20,6 +21,48 @@ class Retable<T : RetableColumns>(
     }
 }
 
+abstract class BaseSupport<T : RetableColumns, O : ReadOptions>(val columns: RetableColumns, val options:O) {
+    abstract fun iterator(input: InputStream, cols:()->RetableColumns): Iterator<RetableRecord>
+    /**
+     * Parses the input
+     *
+     * Note that input is consumed when sequence is consumed, if the end is not reached the reader
+     * should be closed.
+     */
+    fun read(input: InputStream): Retable<T> {
+        var columns:RetableColumns? = null
+        val records = iterator(input, { columns?:this.columns })
+
+        if (!options.firstRecordAsHeader && columns == RetableColumns.auto) {
+            throw IllegalStateException("columns are mandatory when not using first record as header")
+        }
+
+        val validations:RetableValidations
+        if (options.firstRecordAsHeader) {
+            val header = if (records.hasNext()) { records.next() } else { null }
+            if (header == null) {
+                throw IllegalStateException("empty file not allowed when first record is expected to be the header")
+            }
+            val headers = Headers(header.rawData)
+
+            if (this.columns == RetableColumns.auto) {
+                columns = RetableColumns.ofNames(headers.headers)
+                validations = RetableValidations(listOf())
+            } else {
+                columns = this.columns
+                validations = RetableValidations(
+                        columns.list().map { col -> col.headerValidation.validate(headers) }
+                )
+            }
+        } else {
+            columns = this.columns
+            validations = RetableValidations(listOf())
+        }
+
+        return Retable(columns as T, records.asSequence(), validations)
+    }
+
+}
 
 abstract class ReadOptions(
         val trimValues:Boolean,
