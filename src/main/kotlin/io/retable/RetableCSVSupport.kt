@@ -31,7 +31,6 @@ class RetableCSVSupport<T : RetableColumns>(
                 .withQuote(options.quote)
                 .withIgnoreEmptyLines(options.ignoreEmptyLines)
                 .withTrim(options.trimValues)
-                .let { if (options.firstRecordAsHeader) it.withFirstRecordAsHeader() else it }
     }
 
     /**
@@ -41,37 +40,41 @@ class RetableCSVSupport<T : RetableColumns>(
      * should be closed.
      */
     fun read(input: InputStream): Retable<T> {
-        val parse = format.parse(InputStreamReader(input, options.charset))
-        val iterator = parse.iterator()
+        var columns:RetableColumns? = null
+        val records = iterator(input, { columns?:this.columns })
 
-        val headers = parse.headerMap
-        val columns = if (this.columns is ListRetableColumns && this.columns.list().size == 0) {
-            RetableColumns.ofNames(
-                    (0..headers.size - 1)
-                            .map { index -> headers.entries.find { it.value == index } }
-                            .map { it?.key ?: "" }
-                            .toList())
-        } else {
-            this.columns
+        if (!options.firstRecordAsHeader && columns == RetableColumns.auto) {
+            throw IllegalStateException("columns are mandatory when not using first record as header")
         }
 
-        val validations = RetableValidations(
-            if (options.firstRecordAsHeader) {
-                // validate headers
-                columns.list()
-                        .map { col ->
-                            headers.entries
-                                    .find { it.value+1 == col.index }
-                                    ?.let { entry ->
-                                        col.headerValidation.validate(entry.key)
-                                    }
-                                    ?: MissingHeaderRule(col).validate(col.name)
-                        }
-            } else {
-                // nothing to validate
-                listOf()
-            })
+        val validations:RetableValidations
+        if (options.firstRecordAsHeader) {
+            val header = if (records.hasNext()) { records.next() } else { null }
+            if (header == null) {
+                throw IllegalStateException("empty file not allowed when first record is expected to be the header")
+            }
+            val headers = Headers(header.rawData)
 
+            if (this.columns == RetableColumns.auto) {
+                columns = RetableColumns.ofNames(headers.headers)
+                validations = RetableValidations(listOf())
+            } else {
+                columns = this.columns
+                validations = RetableValidations(
+                        columns.list().map { col -> col.headerValidation.validate(headers) }
+                )
+            }
+        } else {
+            columns = this.columns
+            validations = RetableValidations(listOf())
+        }
+
+        return Retable(columns as T, records.asSequence(), validations)
+    }
+
+    fun iterator(input: InputStream, cols:()->RetableColumns): Iterator<RetableRecord> {
+        val parse = format.parse(InputStreamReader(input, options.charset))
+        val iterator = parse.iterator()
         val records = object : Iterator<RetableRecord> {
             var lineNumber: Long = 0
 
@@ -84,10 +87,11 @@ class RetableCSVSupport<T : RetableColumns>(
             override fun next(): RetableRecord {
                 val next = iterator.next()
 
-                return RetableRecord(columns, next.recordNumber, lineNumber + 1, next.toList())
+                return RetableRecord(cols.invoke(),
+                        if (options.firstRecordAsHeader) next.recordNumber - 1 else next.recordNumber,
+                        lineNumber + 1, next.toList())
             }
-        }.asSequence()
-
-        return Retable(columns as T, records, validations)
+        }
+        return records
     }
 }

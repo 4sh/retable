@@ -6,7 +6,6 @@ import strikt.api.expect
 import strikt.assertions.containsExactly
 import strikt.assertions.isEqualTo
 import java.io.ByteArrayInputStream
-import java.io.File
 
 class RetableTest {
 

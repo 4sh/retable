@@ -3,25 +3,53 @@ package io.retable
 
 enum class ValidationLevel { OK, WARN, ERROR, FATAL }
 
-interface ValidationRule<S,D> {
+abstract class ValidationRule<S,C>(val id:String) {
     companion object {
-        fun <S,D> ok(details:D) = object:ValidationRule<S,D> {
-            override fun validate(subject: S?): ValidationResult<S, D> =
-                    ValidationResult(ValidationLevel.OK, subject, this, details)
+        fun <S,C> ok(context:C) = always<S,C>(ValidationLevel.OK, context)
+        fun <S,C> always(level:ValidationLevel, context:C) = object:ValidationRule<S,C>("always.${level.name}") {
+            override fun validate(subject: S?): ValidationResult<S, C> =
+                    ValidationResult(level, subject, context, this)
         }
     }
-    fun validate(subject:S?):ValidationResult<S,D>
+    abstract fun validate(subject:S?):ValidationResult<S,C>
+
+
+
+    // helper functions for implementations
+    protected fun ok(subject:S?, context:C) = result(ValidationLevel.OK, subject, context)
+    protected fun warn(subject:S?, context:C) = result(ValidationLevel.OK, subject, context)
+    protected fun error(subject:S?, context:C) = result(ValidationLevel.OK, subject, context)
+    protected fun fatal(subject:S?, context:C) = result(ValidationLevel.OK, subject, context)
+
+    protected fun result(level: ValidationLevel, subject: S?, context: C) =
+            ValidationResult(level, subject, context, this)
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is ValidationRule<*, *>) return false
+
+        if (id != other.id) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return id.hashCode()
+    }
 }
 
-data class ValidationResult<S,D>(val level:ValidationLevel,
-                            val subject:S?,
-                            val rule:ValidationRule<S,D>,
-                            val details:D)
+data class ValidationResult<S,C>(
+        val level:ValidationLevel,
+        val subject:S?,
+        val context:C,
+        val rule:ValidationRule<S,C>)
 
 class RetableValidations(
         val header:List<ValidationResult<*,*>>,
         // collect all records having at least one validation result which is not OK
         val records:MutableList<RetableRecord> = mutableListOf()) {
+
+
     fun hasHeaderErrors(): Boolean {
         return header
                 .filter { it.level.ordinal >= ValidationLevel.ERROR.ordinal }
@@ -30,87 +58,66 @@ class RetableValidations(
 
     companion object {
         val header = HeaderValidations
+        val data = DataValidations
     }
 }
 
+
+typealias HeaderValidationResult = ValidationResult<Headers, HeaderValidations.Context>
 object HeaderValidations {
-    val eq: (String) -> ValidationRule<String, *>
-            = { StringEqualValidationRule(it, ValidationLevel.ERROR) }
-    val eqIgnoreCase: (String) -> ValidationRule<String, *>
-            = { StringEqualIgnoreCaseValidationRule(it, ValidationLevel.ERROR) }
+    data class Context(val col:RetableColumn<*>, val value:String?)
+    abstract class Rule(id:String) : ValidationRule<Headers, Context>(id)
+
+    fun rule(id:String, col:RetableColumn<*>, predicate:(String)->Boolean, level:ValidationLevel = ValidationLevel.ERROR) =
+            object : Rule("header." + id) {
+                private val missingHeader = missingHeader(col)
+                override fun validate(subject: Headers?): ValidationResult<Headers, Context> {
+                    val missing = missingHeader.validate(subject)
+                    if (missing.level != ValidationLevel.OK) {
+                        return missing
+                    }
+                    val value = subject?.get(col)
+                    return if (predicate.invoke(value!!)) {
+                        ok(subject, Context(col, value))
+                    } else {
+                        result(level, subject, Context(col, value))
+                    }
+                }
+            }
+
+    fun missingHeader(col:RetableColumn<*>) = object : Rule("header.missing") {
+        override fun validate(subject: Headers?): ValidationResult<Headers, Context> {
+            val value = subject?.get(col)
+            if (value == null) {
+                return fatal(subject, Context(col, value))
+            } else {
+                return ok(subject, Context(col, value))
+            }
+        }
+    }
+
+    val eq: (RetableColumn<*>) -> Rule
+            = { col -> rule("equal", col, { it.equals(col.name) }) }
+    val eqIgnoreCase: (RetableColumn<*>) -> Rule
+            = { col -> rule("equalIgnoreCase", col, { it.equals(col.name, true) }) }
 }
 
-// rules
+typealias DataValidationResult<T> = ValidationResult<RetableRecord, DataValidations.Context<T>>
+object DataValidations {
+    data class Context<T>(val col:RetableColumn<T>, val value:T?)
+    abstract class Rule<T>(id:String) : ValidationRule<RetableRecord, Context<T>>(id)
 
-// primitive rules
-data class StringEqualValidationRule(val expect:String, val level:ValidationLevel):ValidationRule<String,String> {
-    override fun validate(subject: String?): ValidationResult<String, String> {
-        return if (expect == subject)
-            ValidationResult(ValidationLevel.OK, subject, this, expect)
-        else ValidationResult(level, subject, this, expect)
-    }
-}
+    fun <T> none():(RetableColumn<T>) -> Rule<T> = { col -> rule<T>("none", col, { true } )}
 
-data class StringEqualIgnoreCaseValidationRule(val expect:String, val level:ValidationLevel):ValidationRule<String,String> {
-    override fun validate(subject: String?): ValidationResult<String, String> {
-        return if (expect.equals(subject, true))
-            ValidationResult(ValidationLevel.OK, subject, this, expect)
-        else ValidationResult(level, subject, this, expect)
-    }
-}
-
-// data validation rule is used to validate a particular column
-data class DataValidationResult<S,D>(val col:RetableColumn<S>, val result:ValidationResult<S,D>)
-
-class DataValidationRule<S,D>(val expect: ValidationRule<S,D>, val col:RetableColumn<S>)
-    :ValidationRule<RetableRecord,DataValidationResult<S,D>> {
-    override fun validate(subject: RetableRecord?): ValidationResult<RetableRecord, DataValidationResult<S, D>> {
-        return expect
-                .validate(subject?.let {it[col]})
-                .let { ValidationResult(it.level, subject, this, DataValidationResult(col, it)) }
-    }
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is DataValidationRule<*, *>) return false
-
-        if (expect != other.expect) return false
-        if (col != other.col) return false
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        var result = expect.hashCode()
-        result = 31 * result + col.hashCode()
-        return result
-    }
-
-    override fun toString(): String {
-        return "DataValidationRule(expect=$expect, col=$col)"
-    }
-}
-
-//
-
-class MissingHeaderRule(val col:RetableColumn<*>):ValidationRule<String,RetableColumn<*>> {
-    override fun validate(subject: String?): ValidationResult<String, RetableColumn<*>> =
-        ValidationResult(ValidationLevel.FATAL, subject, this, col)
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is MissingHeaderRule) return false
-
-        if (col != other.col) return false
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        return col.hashCode()
-    }
-
-    override fun toString(): String {
-        return "MissingHeaderRule(col=$col)"
-    }
+    fun <T>rule(id:String, col:RetableColumn<T>, predicate:(T?)->Boolean, level:ValidationLevel = ValidationLevel.ERROR) =
+            object : Rule<T>("data." + id) {
+                override fun validate(subject: RetableRecord?): ValidationResult<RetableRecord, Context<T>> {
+                    val value = subject?.get(col)
+                    return if (predicate.invoke(value)) {
+                        ok(subject, Context(col, value))
+                    } else {
+                        result(level, subject, Context(col, value))
+                    }
+                }
+            }
 }

@@ -29,12 +29,16 @@ abstract class ReadOptions(
 
 
 
+class Headers(val headers:List<String>) {
+    operator fun get(col:RetableColumn<*>):String? =
+            try { headers[col.index - 1] } catch (e:ArrayIndexOutOfBoundsException) { null }
+}
 
 
 abstract class RetableColumns {
     companion object {
         fun ofNames(names:List<String>,
-                    headerRule: (String) -> ValidationRule<String, *> = RetableValidations.header.eq)
+                    headerRule: (RetableColumn<*>) -> HeaderValidations.Rule = RetableValidations.header.eq)
                 = ofCols(names.mapIndexed { index, s -> StringRetableColumn(index + 1, s, headerRule) }.toList())
         fun ofCols(cols:List<RetableColumn<*>>) = ListRetableColumns(cols)
         val auto = ListRetableColumns(listOf())
@@ -66,12 +70,14 @@ class ListRetableColumns(private val cols:List<RetableColumn<*>>):RetableColumns
 }
 
 abstract class RetableColumn<T>(val index:Int, val name:String,
-                                headerRule: (String) -> ValidationRule<String,*>,
-                                val dataValidation: ValidationRule<T,*>) {
-    val headerValidation:ValidationRule<String,*>
+                                headerRule: (RetableColumn<*>) -> HeaderValidations.Rule,
+                                dataRule: (RetableColumn<T>) -> DataValidations.Rule<T>) {
+    val headerValidation:HeaderValidations.Rule
+    val dataValidation:DataValidations.Rule<T>
 
     init {
-        headerValidation = headerRule.invoke(name)
+        headerValidation = headerRule.invoke(this)
+        dataValidation = dataRule.invoke(this)
     }
 
     override fun equals(other: Any?): Boolean {
@@ -99,15 +105,25 @@ abstract class RetableColumn<T>(val index:Int, val name:String,
 }
 
 class StringRetableColumn(index:Int, name:String,
-                          headerRule: (String) -> ValidationRule<String,*> = RetableValidations.header.eq,
-                          dataValidation: ValidationRule<String,*> = ValidationRule.ok("NO VALIDATION"))
-    : RetableColumn<String>(index, name, headerRule, dataValidation) {
+                          headerRule: (RetableColumn<*>) -> HeaderValidations.Rule =
+                                  RetableValidations.header.eq,
+                          dataRule: (RetableColumn<String>) -> DataValidations.Rule<String> =
+                                  DataValidations.none())
+    : RetableColumn<String>(index, name, headerRule, dataRule) {
     override fun getFromRaw(raw: String): String = raw
+
+    companion object {
+        fun eq(expect:String, level:ValidationLevel = ValidationLevel.ERROR)
+                : (RetableColumn<String>) -> DataValidations.Rule<String> =
+                { col -> DataValidations.rule<String>("equals", col, { expect.equals(it) }, level) }
+    }
 }
 class IntRetableColumn(index:Int, name:String,
-                       headerRule: (String) -> ValidationRule<String,*> = RetableValidations.header.eq,
-                       dataValidation: ValidationRule<Int,*> = ValidationRule.ok("NO VALIDATION"))
-    : RetableColumn<Int>(index, name, headerRule, dataValidation) {
+                       headerRule: (RetableColumn<*>) -> HeaderValidations.Rule =
+                               RetableValidations.header.eq,
+                       dataRule: (RetableColumn<Int>) -> DataValidations.Rule<Int> =
+                               DataValidations.none())
+    : RetableColumn<Int>(index, name, headerRule, dataRule) {
     override fun getFromRaw(raw: String): Int = raw.toInt()
 }
 

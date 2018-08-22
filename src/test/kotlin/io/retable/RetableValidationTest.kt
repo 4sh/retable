@@ -23,14 +23,11 @@ class RetableValidationTest {
 
         expect(retable.validations.hasHeaderErrors()).isTrue()
         expect(retable.validations.header).hasSize(2)
-        expect(retable.validations.header[0])
-                .isEqualTo(ValidationResult(ValidationLevel.ERROR, "first",
-                        StringEqualValidationRule("FIRST", ValidationLevel.ERROR),
-                        "FIRST"))
-        expect(retable.validations.header[1])
-                .isEqualTo(ValidationResult(ValidationLevel.ERROR, "second",
-                        StringEqualValidationRule("SECOND", ValidationLevel.ERROR),
-                        "SECOND"))
+        expect(retable.validations.header[0].level).isEqualTo(ValidationLevel.ERROR)
+        expect(retable.validations.header[0].context).isEqualTo(HeaderValidations.Context(columns[1], "first"))
+
+        expect(retable.validations.header[1].level).isEqualTo(ValidationLevel.ERROR)
+        expect(retable.validations.header[1].context).isEqualTo(HeaderValidations.Context(columns[2], "second"))
 
         // the columns shouldn't be changed by what has been actually found
         expect(retable.columns.list()).containsExactly(*columns.list().toTypedArray())
@@ -55,10 +52,8 @@ class RetableValidationTest {
 
         expect(retable.validations.hasHeaderErrors()).isFalse()
         expect(retable.validations.header).hasSize(2)
-        expect(retable.validations.header[0])
-                .isEqualTo(ValidationResult(ValidationLevel.OK, "first",
-                        StringEqualIgnoreCaseValidationRule("FIRST", ValidationLevel.ERROR),
-                        "FIRST"))
+        expect(retable.validations.header[0].level).isEqualTo(ValidationLevel.OK)
+        expect(retable.validations.header[0].context).isEqualTo(HeaderValidations.Context(columns[1], "first"))
     }
 
     // helper extensions

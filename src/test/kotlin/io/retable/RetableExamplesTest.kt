@@ -1,11 +1,8 @@
 package io.retable
 
 import org.junit.jupiter.api.Test
-import strikt.api.Assertion
 import strikt.api.expect
-import strikt.assertions.containsExactly
 import strikt.assertions.isEqualTo
-import java.io.ByteArrayInputStream
 import java.io.File
 
 class RetableExamplesTest {
