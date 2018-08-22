@@ -4,43 +4,47 @@ import org.apache.poi.ss.usermodel.Row
 import org.apache.poi.ss.usermodel.WorkbookFactory
 import java.io.InputStream
 
-class RetableExcelSupport<T : RetableColumns>(val columns: T) {
-    fun read(input: InputStream): Retable<T> {
+
+class ExcelReadOptions(trimValues:Boolean = true,
+                       ignoreEmptyLines:Boolean = true,
+                       firstRecordAsHeader:Boolean = true)
+    : ReadOptions(trimValues, ignoreEmptyLines, firstRecordAsHeader)
+
+class RetableExcelSupport<T : RetableColumns>(
+        columns: T, options:ExcelReadOptions = ExcelReadOptions())
+    : BaseSupport<T, ExcelReadOptions>(columns, options) {
+    override fun iterator(input: InputStream, cols: () -> RetableColumns): Iterator<RetableRecord> {
         val workbook = WorkbookFactory.create(input)
 
         val sheet = workbook.getSheetAt(0)
 
         val rowIterator = sheet.rowIterator()
 
-        var lineNumber:Long = 0
-        val header = rowIterator.next()
-
-        val columns = if (this.columns is ListRetableColumns && this.columns.list().size == 0) {
-            RetableColumns.ofNames(
-                    header.cellIterator().asSequence()
-                            .map { it.stringCellValue }
-                            .toList())
-        } else {
-            this.columns
-        }
-
-        lineNumber++
-
-        val records = object : Iterator<RetableRecord> {
+        return object : Iterator<RetableRecord> {
+            private var lineNumber:Long = 0
             private var recordNumber: Long = 0
             private var row: Row? = null
+            private var headerLoaded: Boolean = false
 
             override fun hasNext(): Boolean {
+
                 while (rowIterator.hasNext()) {
                     row = rowIterator.next()
                     lineNumber++
-                    if (!row!!.getCell(0).stringCellValue.trim().isEmpty()) {
-                        recordNumber++
-                        return true
-                    } else {
+
+                    if (options.ignoreEmptyLines && row!!.getCell(0).stringCellValue.trim().isEmpty()) {
                         row = null // don't keep current empty row in our state
+                    } else {
+                        if (options.firstRecordAsHeader && !headerLoaded) {
+                            headerLoaded = true
+                        } else {
+                            recordNumber++
+                        }
+
+                        return true
                     }
                 }
+
                 return false
             }
 
@@ -50,11 +54,12 @@ class RetableExcelSupport<T : RetableColumns>(val columns: T) {
                         throw IllegalStateException("no more rows")
                     }
                 }
-                return RetableRecord(columns, recordNumber, lineNumber,
-                        row!!.cellIterator().asSequence().map { it.stringCellValue }.toList())
+                return RetableRecord(cols.invoke(), recordNumber, lineNumber,
+                        row!!.cellIterator().asSequence()
+                                .map { it.stringCellValue }
+                                .map { if (options.trimValues) { it.trim() } else { it }}
+                                .toList())
             }
-        }.asSequence()
-
-        return Retable(columns as T, records, RetableValidations(listOf()))
+        }
     }
 }
