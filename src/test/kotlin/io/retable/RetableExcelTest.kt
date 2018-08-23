@@ -4,12 +4,14 @@ import org.junit.jupiter.api.Test
 import strikt.api.expect
 import strikt.assertions.contains
 import strikt.assertions.containsExactly
+import strikt.assertions.hasSize
+import strikt.assertions.isEqualTo
 
 class RetableExcelTest {
 
 
     @Test
-    fun `should read simple xlsx with default settings`() {
+    fun `should read xlsx with default settings`() {
         val retable = Retable.excel().read(
                 "/many_data.xlsx".resourceStream())
 
@@ -22,6 +24,24 @@ class RetableExcelTest {
                         listOf("Alfred", "Dalton", "12",
                                 "2006-11-06", "12:34:00", "http://example.com/dalton", "2.5", "14.5", "24", "0.05"))
         )
+    }
+
+    @Test
+    fun `should read xlsx with defined cols`() {
+        val retable = Retable.excel(
+                object : RetableColumns() {
+                    val firstName = StringRetableColumn(c++, "First name")
+                    val lastName = StringRetableColumn(c++, "Last Name")
+                    val age = IntRetableColumn(c++, "Age")
+                    val date = StringRetableColumn(c++, "Date")
+                }
+        ).read(
+                "/many_data.xlsx".resourceStream())
+
+        val records = retable.records.toList()
+        expect(records).hasSize(3)
+        expect(records[1][retable.columns.firstName]).isEqualTo("Alfred")
+        expect(records[1][retable.columns.age]).isEqualTo(12)
     }
 
     // helper extensions
