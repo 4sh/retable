@@ -1,8 +1,10 @@
 package io.retable
 
-import org.apache.poi.ss.usermodel.Row
-import org.apache.poi.ss.usermodel.WorkbookFactory
+import org.apache.poi.ss.usermodel.*
 import java.io.InputStream
+import java.text.SimpleDateFormat
+import java.time.format.DateTimeFormatter
+import java.util.*
 
 
 class ExcelReadOptions(trimValues:Boolean = true,
@@ -32,7 +34,9 @@ class RetableExcelSupport<T : RetableColumns>(
                     row = rowIterator.next()
                     lineNumber++
 
-                    if (options.ignoreEmptyLines && row!!.getCell(0).stringCellValue.trim().isEmpty()) {
+                    if (options.ignoreEmptyLines
+                            &&  ( row!!.getCell(0) == null
+                                    || row!!.getCell(0).asStringValue().trim().isEmpty())) {
                         row = null // don't keep current empty row in our state
                     } else {
                         if (options.firstRecordAsHeader && !headerLoaded) {
@@ -56,10 +60,29 @@ class RetableExcelSupport<T : RetableColumns>(
                 }
                 return RetableRecord(cols.invoke(), recordNumber, lineNumber,
                         row!!.cellIterator().asSequence()
-                                .map { it.stringCellValue }
+                                .map { it.asStringValue() }
                                 .map { if (options.trimValues) { it.trim() } else { it }}
                                 .toList())
             }
+        }
+    }
+
+    fun Cell.asStringValue():String {
+        return when (this.cellTypeEnum) {
+            CellType.NUMERIC    ->  if (DateUtil.isCellDateFormatted(this))
+                                        {
+                                            val  d = SimpleDateFormat("yyyy-MM-dd").format(this.dateCellValue)
+                                            if (d == "1899-12-31") {
+                                                return SimpleDateFormat("HH:mm:SS").format(this.dateCellValue)
+                                            } else {
+                                                return d
+                                            }
+                                        }
+                                    else
+                                        { this.numericCellValue.toString() }
+
+            CellType.FORMULA    -> try { this.numericCellValue.toString() } catch (e:Exception) { this.stringCellValue }
+            else                -> this.stringCellValue
         }
     }
 }
