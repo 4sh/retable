@@ -128,6 +128,15 @@ abstract class RetableColumns {
 
     operator fun get(index:Int) = list().find { it.index == index } ?: throw ArrayIndexOutOfBoundsException(index)
 
+    fun string(name:String,
+               headerRule: (RetableColumn<*>) -> HeaderValidations.Rule = RetableValidations.header.eq,
+               dataRule: (RetableColumn<String>) -> DataValidations.Rule<String> = DataValidations.none()) =
+            StringRetableColumn(c++, name, headerRule, dataRule)
+    fun int(name:String,
+               headerRule: (RetableColumn<*>) -> HeaderValidations.Rule = RetableValidations.header.eq,
+               dataRule: (RetableColumn<Int>) -> DataValidations.Rule<Int> = DataValidations.none()) =
+            IntRetableColumn(c++, name, headerRule, dataRule)
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is RetableColumns) return false
@@ -189,7 +198,7 @@ class StringRetableColumn(index:Int, name:String,
     companion object {
         fun eq(expect:String, level:ValidationLevel = ValidationLevel.ERROR)
                 : (RetableColumn<String>) -> DataValidations.Rule<String> =
-                { col -> DataValidations.rule<String>("equals", col, { expect.equals(it) }, level) }
+                { col -> DataValidations.rule("equals", col, { expect.equals(it) }, level) }
     }
 }
 class IntRetableColumn(index:Int, name:String,

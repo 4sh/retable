@@ -12,9 +12,9 @@ class RetableTest {
     @Test
     fun `should list columns`() {
         val cols = object:RetableColumns() {
-            val test1 = StringRetableColumn(c++, "test1")
-            val test2 = IntRetableColumn(c++, "test2")
-            val somethingElse = "test3"
+            val test1 = string("test1")
+            val test2 = int("test2")
+            val notAColumn = "test3"
         }
 
         expect(cols.list()).containsExactly(cols.test1, cols.test2)
@@ -62,9 +62,9 @@ class RetableTest {
         """.trimIndent()
 
         val columns = object:RetableColumns() {
-            val firstName = StringRetableColumn(c++, "first_name")
-            val lastName = StringRetableColumn(c++, "last_name")
-            val age = IntRetableColumn(c++, "age")
+            val firstName = string("first_name")
+            val lastName = string("last_name")
+            val age = int("age")
         }
 
         val retable = Retable.csv(columns = columns).read(ByteArrayInputStream(csv.toByteArray(Charsets.UTF_8)))
@@ -95,9 +95,9 @@ class RetableTest {
         """.trimIndent()
 
         val retable = Retable.csv(columns = object:RetableColumns() {
-            val firstName = StringRetableColumn(c++, "first_name")
-            val lastName = StringRetableColumn(c++, "last_name")
-            val age = IntRetableColumn(c++, "age")
+            val firstName = string("first_name")
+            val lastName = string("last_name")
+            val age = int("age")
         }).read(ByteArrayInputStream(csv.toByteArray(Charsets.UTF_8)))
 
         retable.columns.apply {

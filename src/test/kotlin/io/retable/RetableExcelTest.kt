@@ -30,10 +30,10 @@ class RetableExcelTest {
     fun `should read xlsx with defined cols`() {
         val retable = Retable.excel(
                 object : RetableColumns() {
-                    val firstName = StringRetableColumn(c++, "First name")
-                    val lastName = StringRetableColumn(c++, "Last Name")
-                    val age = IntRetableColumn(c++, "Age")
-                    val date = StringRetableColumn(c++, "Date")
+                    val firstName = string("First name")
+                    val lastName = string("Last Name")
+                    val age = int("Age")
+                    val date = string("Date")
                 }
         ).read(
                 "/many_data.xlsx".resourceStream())

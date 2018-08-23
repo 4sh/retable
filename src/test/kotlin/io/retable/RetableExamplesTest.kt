@@ -87,11 +87,10 @@ class RetableExamplesTest {
                     // we can also define the expected columns
                     object:RetableColumns() {
                         // each column is defined as a property on an object
-                        // the use of c++ is to easily set the index of each column, not for some '80s language :)
-                        val FIRST_NAME = StringRetableColumn(c++, "first_name")
-                        val LAST_NAME  = StringRetableColumn(c++, "last_name")
+                        val FIRST_NAME = string("first_name")
+                        val LAST_NAME  = string("last_name")
                         // note that the column is typed - here the age is expected to be an Int
-                        val AGE        = IntRetableColumn(c++, "age")
+                        val AGE        = int("age")
                     })
                     .read(it)
 
