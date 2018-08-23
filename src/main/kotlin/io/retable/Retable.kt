@@ -22,7 +22,7 @@ class Retable<T : RetableColumns>(
 }
 
 abstract class BaseSupport<T : RetableColumns, O : ReadOptions>(val columns: RetableColumns, val options:O) {
-    abstract fun iterator(input: InputStream, cols:()->RetableColumns): Iterator<RetableRecord>
+    abstract fun iterator(input: InputStream): Iterator<List<String>>
     /**
      * Parses the input
      *
@@ -30,20 +30,45 @@ abstract class BaseSupport<T : RetableColumns, O : ReadOptions>(val columns: Ret
      * should be closed.
      */
     fun read(input: InputStream): Retable<T> {
-        var columns:RetableColumns? = null
-        val records = iterator(input, { columns?:this.columns })
+        val rawData = object : Iterator<List<String>> {
+            val raw = iterator(input)
+            var next:List<String>? = null
+            var lineNumber:Long = 0
+
+            override fun hasNext(): Boolean {
+                lineNumber++
+                next = if (raw.hasNext()) { raw.next() } else { null }
+                while (next != null && ignoreLine(next)) {
+                    lineNumber++
+                    next = if (raw.hasNext()) { raw.next() } else { null }
+                }
+                return next != null
+            }
+
+            private fun ignoreLine(list: List<String>?): Boolean =
+                    options.ignoreEmptyLines && isEmptyLine(list)
+
+            private fun isEmptyLine(list: List<String>?): Boolean =
+                    list == null || list.isEmpty() || list.filter { !it.trim().isEmpty() }.isEmpty()
+
+            override fun next(): List<String> {
+                if (next == null) hasNext() // make sure hasNext has been called so that next is fetched
+                return next ?: throw IllegalStateException("no more records")
+            }
+        }
 
         if (!options.firstRecordAsHeader && columns == RetableColumns.auto) {
             throw IllegalStateException("columns are mandatory when not using first record as header")
         }
 
         val validations:RetableValidations
+        val columns:RetableColumns
         if (options.firstRecordAsHeader) {
-            val header = if (records.hasNext()) { records.next() } else { null }
+            val header = if (rawData.hasNext()) { rawData.next() } else { null }
             if (header == null) {
                 throw IllegalStateException("empty file not allowed when first record is expected to be the header")
             }
-            val headers = Headers(header.rawData)
+            val headers = Headers(header)
 
             if (this.columns == RetableColumns.auto) {
                 columns = RetableColumns.ofNames(headers.headers)
@@ -59,7 +84,12 @@ abstract class BaseSupport<T : RetableColumns, O : ReadOptions>(val columns: Ret
             validations = RetableValidations(listOf())
         }
 
-        return Retable(columns as T, records.asSequence(), validations)
+        return Retable(
+                columns as T,
+                rawData.asSequence()
+                        .mapIndexed {index, raw ->
+                            RetableRecord(columns, index + 1L, rawData.lineNumber, raw)},
+                validations)
     }
 
 }

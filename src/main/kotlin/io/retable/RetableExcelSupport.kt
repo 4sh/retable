@@ -3,8 +3,6 @@ package io.retable
 import org.apache.poi.ss.usermodel.*
 import java.io.InputStream
 import java.text.SimpleDateFormat
-import java.time.format.DateTimeFormatter
-import java.util.*
 
 
 class ExcelReadOptions(trimValues:Boolean = true,
@@ -15,54 +13,21 @@ class ExcelReadOptions(trimValues:Boolean = true,
 class RetableExcelSupport<T : RetableColumns>(
         columns: T, options:ExcelReadOptions = ExcelReadOptions())
     : BaseSupport<T, ExcelReadOptions>(columns, options) {
-    override fun iterator(input: InputStream, cols: () -> RetableColumns): Iterator<RetableRecord> {
+    override fun iterator(input: InputStream): Iterator<List<String>> {
         val workbook = WorkbookFactory.create(input)
-
         val sheet = workbook.getSheetAt(0)
-
         val rowIterator = sheet.rowIterator()
 
-        return object : Iterator<RetableRecord> {
-            private var lineNumber:Long = 0
-            private var recordNumber: Long = 0
-            private var row: Row? = null
-            private var headerLoaded: Boolean = false
-
+        return object : Iterator<List<String>> {
             override fun hasNext(): Boolean {
-
-                while (rowIterator.hasNext()) {
-                    row = rowIterator.next()
-                    lineNumber++
-
-                    if (options.ignoreEmptyLines
-                            &&  ( row!!.getCell(0) == null
-                                    || row!!.getCell(0).asStringValue().trim().isEmpty())) {
-                        row = null // don't keep current empty row in our state
-                    } else {
-                        if (options.firstRecordAsHeader && !headerLoaded) {
-                            headerLoaded = true
-                        } else {
-                            recordNumber++
-                        }
-
-                        return true
-                    }
-                }
-
-                return false
+                return rowIterator.hasNext()
             }
 
-            override fun next(): RetableRecord {
-                if (row == null) {
-                    if (!hasNext()) {
-                        throw IllegalStateException("no more rows")
-                    }
-                }
-                return RetableRecord(cols.invoke(), recordNumber, lineNumber,
-                        row!!.cellIterator().asSequence()
-                                .map { it.asStringValue() }
-                                .map { if (options.trimValues) { it.trim() } else { it }}
-                                .toList())
+            override fun next(): List<String> {
+                return rowIterator.next().cellIterator().asSequence()
+                        .map { it.asStringValue() }
+                        .map { if (options.trimValues) { it.trim() } else { it }}
+                        .toList()
             }
         }
     }

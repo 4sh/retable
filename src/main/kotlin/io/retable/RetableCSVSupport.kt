@@ -33,24 +33,17 @@ class RetableCSVSupport<T : RetableColumns>(
                 .withTrim(options.trimValues)
     }
 
-    override fun iterator(input: InputStream, cols:()->RetableColumns): Iterator<RetableRecord> {
+    override fun iterator(input: InputStream): Iterator<List<String>> {
         val parse = format.parse(InputStreamReader(input, options.charset))
         val iterator = parse.iterator()
-        val records = object : Iterator<RetableRecord> {
-            var lineNumber: Long = 0
-
+        val records = object : Iterator<List<String>> {
             override fun hasNext(): Boolean {
-                // we have to store the line number here, because calling hasNext reads the input
-                lineNumber = parse.currentLineNumber
                 return iterator.hasNext()
             }
 
-            override fun next(): RetableRecord {
+            override fun next(): List<String> {
                 val next = iterator.next()
-
-                return RetableRecord(cols.invoke(),
-                        if (options.firstRecordAsHeader) next.recordNumber - 1 else next.recordNumber,
-                        lineNumber + 1, next.toList())
+                return next.toList()
             }
         }
         return records
