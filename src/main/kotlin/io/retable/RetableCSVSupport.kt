@@ -22,16 +22,12 @@ class RetableCSVSupport<T : RetableColumns>(
         options:CSVReadOptions = CSVReadOptions()
 ) : BaseSupport<T, CSVReadOptions>(columns, options) {
 
-    private val format: CSVFormat
-
-    init {
-        format = CSVFormat
-                .newFormat(options.delimiter)
-                .withEscape(options.escape)
-                .withQuote(options.quote)
-                .withIgnoreEmptyLines(options.ignoreEmptyLines)
-                .withTrim(options.trimValues)
-    }
+    private val format: CSVFormat = CSVFormat
+            .newFormat(options.delimiter)
+            .withEscape(options.escape)
+            .withQuote(options.quote)
+            .withIgnoreEmptyLines(false) // this is handled by base support
+            .withTrim(false) // this is handled by base support
 
     override fun iterator(input: InputStream): Iterator<List<String>> {
         val parse = format.parse(InputStreamReader(input, options.charset))

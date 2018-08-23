@@ -53,7 +53,8 @@ abstract class BaseSupport<T : RetableColumns, O : ReadOptions>(val columns: Ret
 
             override fun next(): List<String> {
                 if (next == null) hasNext() // make sure hasNext has been called so that next is fetched
-                return next ?: throw IllegalStateException("no more records")
+                return (next ?: throw IllegalStateException("no more records"))
+                            .map { if (options.trimValues) it.trim() else it }
             }
         }
 

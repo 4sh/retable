@@ -33,6 +33,7 @@ class RetableCSVTest {
     fun `should parse csv with custom settings`() {
         val csv = """
             `Arthur `;` Rimbaud `;`Le dormeur du val ; 1870`
+
             `Victor `;` Hugo `;`Demain, dès l'aube… ; 1856`
             """.trimIndent()
 
@@ -42,13 +43,14 @@ class RetableCSVTest {
                             delimiter = ';',
                             quote = '`',
                             trimValues = true,
+                            ignoreEmptyLines = true,
                             firstRecordAsHeader = false
         )).read(ByteArrayInputStream(csv.toByteArray(Charsets.UTF_8)))
 
         expect(retable.records).containsExactly(
                 RetableRecord(retable.columns,1, 1,
                         listOf("Arthur", "Rimbaud", "Le dormeur du val ; 1870")),
-                RetableRecord(retable.columns,2, 2,
+                RetableRecord(retable.columns,2, 3,
                         listOf("Victor", "Hugo", "Demain, dès l'aube… ; 1856"))
         )
     }
