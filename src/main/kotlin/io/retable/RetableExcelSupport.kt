@@ -79,7 +79,9 @@ class RetableExcelSupport<T : RetableColumns>(
                                             }
                                         }
                                     else
-                                        { this.numericCellValue.toString() }
+                                        {
+                                            this.numericCellValue.toString().replace(Regex("\\.0$"), "")
+                                        }
 
             CellType.FORMULA    -> try { this.numericCellValue.toString() } catch (e:Exception) { this.stringCellValue }
             else                -> this.stringCellValue

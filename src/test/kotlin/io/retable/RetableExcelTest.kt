@@ -19,8 +19,8 @@ class RetableExcelTest {
 
         expect(retable.records.toList()).contains(
                 RetableRecord(columns,2, 4,
-                        listOf("Alfred", "Dalton", "12.0",
-                                "2006-11-06", "12:34:00", "http://example.com/dalton", "2.5", "14.5", "24.0", "0.5"))
+                        listOf("Alfred", "Dalton", "12",
+                                "2006-11-06", "12:34:00", "http://example.com/dalton", "2.5", "14.5", "24", "0.05"))
         )
     }
 
