@@ -6,7 +6,7 @@ object Versions {
 }
 
 plugins {
-    kotlin("jvm") version "1.2.60"
+    kotlin("jvm") version "1.2.61"
 }
 
 repositories {
