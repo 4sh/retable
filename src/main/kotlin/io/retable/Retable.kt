@@ -9,7 +9,7 @@ import kotlin.reflect.jvm.jvmErasure
 class Retable<T : RetableColumns>(
         val columns:T,
         val records:Sequence<RetableRecord>,
-        val validations: RetableValidations
+        val violations: RetableViolations
 ) {
     companion object {
         fun csv(options:CSVReadOptions = CSVReadOptions()) = csv(RetableColumns.auto, options)
@@ -62,7 +62,7 @@ abstract class BaseSupport<T : RetableColumns, O : ReadOptions>(val columns: Ret
             throw IllegalStateException("columns are mandatory when not using first record as header")
         }
 
-        val validations:RetableValidations
+        val violations:RetableViolations
         val columns:RetableColumns
         if (options.firstRecordAsHeader) {
             val header = if (rawData.hasNext()) { rawData.next() } else { null }
@@ -73,16 +73,16 @@ abstract class BaseSupport<T : RetableColumns, O : ReadOptions>(val columns: Ret
 
             if (this.columns == RetableColumns.auto) {
                 columns = RetableColumns.ofNames(headers.headers)
-                validations = RetableValidations(listOf())
+                violations = RetableViolations(listOf())
             } else {
                 columns = this.columns
-                validations = RetableValidations(
-                        columns.list().map { col -> col.headerValidation.validate(headers) }
+                violations = RetableViolations(
+                        columns.list().map { col -> col.headerConstraint.validate(headers) }
                 )
             }
         } else {
             columns = this.columns
-            validations = RetableValidations(listOf())
+            violations = RetableViolations(listOf())
         }
 
         return Retable(
@@ -90,7 +90,7 @@ abstract class BaseSupport<T : RetableColumns, O : ReadOptions>(val columns: Ret
                 rawData.asSequence()
                         .mapIndexed {index, raw ->
                             RetableRecord(columns, index + 1L, rawData.lineNumber, raw)},
-                validations)
+                violations)
     }
 
 }
@@ -112,7 +112,7 @@ class Headers(val headers:List<String>) {
 abstract class RetableColumns {
     companion object {
         fun ofNames(names:List<String>,
-                    headerRule: (RetableColumn<*>) -> HeaderValidations.Rule = RetableValidations.header.eq)
+                    headerRule: (RetableColumn<*>) -> HeaderConstraint = HeaderConstraints.eq)
                 = ofCols(names.mapIndexed { index, s -> StringRetableColumn(index + 1, s, headerRule) }.toList())
         fun ofCols(cols:List<RetableColumn<*>>) = ListRetableColumns(cols)
         val auto = ListRetableColumns(listOf())
@@ -129,13 +129,11 @@ abstract class RetableColumns {
     operator fun get(index:Int) = list().find { it.index == index } ?: throw ArrayIndexOutOfBoundsException(index)
 
     fun string(name:String,
-               headerRule: (RetableColumn<*>) -> HeaderValidations.Rule = RetableValidations.header.eq,
-               dataRule: (RetableColumn<String>) -> DataValidations.Rule<String> = DataValidations.none()) =
-            StringRetableColumn(c++, name, headerRule, dataRule)
+               headerConstraint: (RetableColumn<*>) ->  HeaderConstraint = HeaderConstraints.eq) =
+            StringRetableColumn(c++, name, headerConstraint)
     fun int(name:String,
-               headerRule: (RetableColumn<*>) -> HeaderValidations.Rule = RetableValidations.header.eq,
-               dataRule: (RetableColumn<Int>) -> DataValidations.Rule<Int> = DataValidations.none()) =
-            IntRetableColumn(c++, name, headerRule, dataRule)
+            headerConstraint: (RetableColumn<*>) ->  HeaderConstraint = HeaderConstraints.eq) =
+            IntRetableColumn(c++, name, headerConstraint)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -153,14 +151,11 @@ class ListRetableColumns(private val cols:List<RetableColumn<*>>):RetableColumns
 }
 
 abstract class RetableColumn<T>(val index:Int, val name:String,
-                                headerRule: (RetableColumn<*>) -> HeaderValidations.Rule,
-                                dataRule: (RetableColumn<T>) -> DataValidations.Rule<T>) {
-    val headerValidation:HeaderValidations.Rule
-    val dataValidation:DataValidations.Rule<T>
+                                headerRule: (RetableColumn<*>) -> HeaderConstraint) {
+    val headerConstraint:HeaderConstraint
 
     init {
-        headerValidation = headerRule.invoke(this)
-        dataValidation = dataRule.invoke(this)
+        headerConstraint = headerRule.invoke(this)
     }
 
     override fun equals(other: Any?): Boolean {
@@ -188,25 +183,13 @@ abstract class RetableColumn<T>(val index:Int, val name:String,
 }
 
 class StringRetableColumn(index:Int, name:String,
-                          headerRule: (RetableColumn<*>) -> HeaderValidations.Rule =
-                                  RetableValidations.header.eq,
-                          dataRule: (RetableColumn<String>) -> DataValidations.Rule<String> =
-                                  DataValidations.none())
-    : RetableColumn<String>(index, name, headerRule, dataRule) {
+                          headerConstraint: (RetableColumn<*>) ->  HeaderConstraint)
+    : RetableColumn<String>(index, name, headerConstraint) {
     override fun getFromRaw(raw: String): String = raw
-
-    companion object {
-        fun eq(expect:String, level:ValidationLevel = ValidationLevel.ERROR)
-                : (RetableColumn<String>) -> DataValidations.Rule<String> =
-                { col -> DataValidations.rule("equals", col, { expect.equals(it) }, level) }
-    }
 }
 class IntRetableColumn(index:Int, name:String,
-                       headerRule: (RetableColumn<*>) -> HeaderValidations.Rule =
-                               RetableValidations.header.eq,
-                       dataRule: (RetableColumn<Int>) -> DataValidations.Rule<Int> =
-                               DataValidations.none())
-    : RetableColumn<Int>(index, name, headerRule, dataRule) {
+                       headerConstraint: (RetableColumn<*>) ->  HeaderConstraint)
+    : RetableColumn<Int>(index, name, headerConstraint) {
     override fun getFromRaw(raw: String): Int = raw.toInt()
 }
 
@@ -216,8 +199,7 @@ class IntRetableColumn(index:Int, name:String,
 data class RetableRecord(val columns: RetableColumns,
                          val recordNumber: Long,
                          val lineNumber: Long,
-                         val rawData: List<String>,
-                         val validations:List<ValidationResult<RetableRecord,*>> = listOf()
+                         val rawData: List<String>
                          ) {
     operator fun get(c:String):String? {
         return columns.list()
