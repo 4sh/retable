@@ -152,11 +152,11 @@ class RetableExamplesTest {
                                     // ---
                                     // line 2 - Xavier Hanin
                                     // violations:
-                                    // ERROR - age 242 should be inRange 0..120
+                                    // ERROR - age 241 should be between 0 and 120
                                     // line 3 - A Dalton
                                     // violations:
-                                    // ERROR - first_name "A" length 1 should be inRange 3..20
-                                    // ERROR - age "TWELVE" should be isInteger
+                                    // ERROR - first_name "A" length 1 should be between 3 and 20
+                                    // ERROR - age "TWELVE" should be an integer
                                     // ---
             }
         }
@@ -165,11 +165,11 @@ class RetableExamplesTest {
             Hello Victor Hugo
             line 2 - Xavier Hanin
             violations:
-            ERROR - age 241 should be inRange 0..120
+            ERROR - age 241 should be between 0 and 120
             line 3 - A Dalton
             violations:
-            ERROR - first_name "A" length 1 should be inRange 3..20
-            ERROR - age "TWELVE" should be isInteger
+            ERROR - first_name "A" length 1 should be between 3 and 20
+            ERROR - age "TWELVE" should be an integer
             """)
     }
 }
