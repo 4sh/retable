@@ -17,8 +17,9 @@ class Retable<T : RetableColumns>(
         fun <T : RetableColumns> csv(columns:T, options:CSVReadOptions
                 = CSVReadOptions()) = RetableCSVSupport(columns, options)
 
-        fun excel() = excel(RetableColumns.auto)
-        fun <T : RetableColumns> excel(columns:T) = RetableExcelSupport(columns)
+        fun excel(options:ExcelReadOptions = ExcelReadOptions()) = excel(RetableColumns.auto, options)
+        fun <T : RetableColumns> excel(columns:T, options:ExcelReadOptions = ExcelReadOptions()) =
+                RetableExcelSupport(columns, options)
     }
 }
 

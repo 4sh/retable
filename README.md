@@ -172,6 +172,7 @@ val retable = Retable.csv(
                 options = CSVReadOptions(
                             delimiter = ';',
                             quote = '`',
+                            ignoreEmptyLines = true,
                             trimValues = true,
                             firstRecordAsHeader = false
         )).read(it)
@@ -179,8 +180,27 @@ val retable = Retable.csv(
 
 ### Excel Options
 
-TO BE IMPLEMENTED
+#### Select Sheet by name
 
+```kotlin
+val retable = Retable.excel(options = ExcelReadOptions(sheetName = "my sheet")).read(it)
+```
+
+#### Select Sheet by index
+
+```kotlin
+val retable = Retable.excel(options = ExcelReadOptions(sheetIndex = 2)).read(it)
+```
+
+#### Common options
+
+```kotlin
+val retable = Retable.excel(options = ExcelReadOptions(
+                ignoreEmptyLines = true,
+                trimValues = true,
+                firstRecordAsHeader = false
+         )).read(it)
+```
 
 ## Installation
 

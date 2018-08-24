@@ -5,9 +5,12 @@ import java.io.InputStream
 import java.text.SimpleDateFormat
 
 
-class ExcelReadOptions(trimValues:Boolean = true,
-                       ignoreEmptyLines:Boolean = true,
-                       firstRecordAsHeader:Boolean = true)
+class ExcelReadOptions(
+        val sheetName:String? = null, // sheet name (used in priority over sheet index, if provided)
+        val sheetIndex:Int? = null, // sheet index (one based)
+        trimValues:Boolean = true,
+        ignoreEmptyLines:Boolean = true,
+        firstRecordAsHeader:Boolean = true)
     : ReadOptions(trimValues, ignoreEmptyLines, firstRecordAsHeader)
 
 class RetableExcelSupport<T : RetableColumns>(
@@ -15,8 +18,10 @@ class RetableExcelSupport<T : RetableColumns>(
     : BaseSupport<T, ExcelReadOptions>(columns, options) {
     override fun iterator(input: InputStream): Iterator<List<String>> {
         val workbook = WorkbookFactory.create(input)
-        val sheet = workbook.getSheetAt(0)
-        val rowIterator = sheet.rowIterator()
+        val sheet = if (options.sheetName != null) workbook.getSheet(options.sheetName)
+                        else workbook.getSheetAt((options.sheetIndex?:1) - 1)
+        val rowIterator = sheet?.rowIterator()?:
+                throw IllegalStateException("worksheet `${options.sheetName?:options.sheetIndex?:1}` not found")
 
         return object : Iterator<List<String>> {
             override fun hasNext(): Boolean {
