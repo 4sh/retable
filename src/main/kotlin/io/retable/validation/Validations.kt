@@ -52,7 +52,7 @@ enum class ValidationSeverity {
     OK, WARN, ERROR, FATAL
 }
 
-data class ValidationProperty<S,V>(
+data class ValidationProperty<in S, out V>(
         val name:String,
         val accessor: (S) -> V
 )
@@ -89,6 +89,9 @@ data class RuleCheck<S, V, E, R>(val rule:ValidationRule<S, V, E, R>,
     fun message() = messageTemplate.buildDefaultMessage(this)
     fun i18nMessage() = messageTemplate.buildI18nMessage(rule.i18nResolver, this)
     fun isValid() = when (severity) { ValidationSeverity.OK, ValidationSeverity.WARN -> true else -> false }
+
+    // used to return this check as result for a predicate
+    fun toPair(): Pair<Boolean, RuleCheck<S, V, E, R>> = isValid() to this
 }
 
 
@@ -112,7 +115,7 @@ data class RuleCheckMessageTemplate<S, V, E, R>(
         context.forEach {
             msg = msg.replace("{${it.key}}", it.value?.toString()?:"")
         }
-        return msg
+        return msg.trim()
     }
 }
 
@@ -156,6 +159,10 @@ object Validations {
         fun equalsIgnoreCase(expected:String) = selfRule<String?, String>(
                 id = "validations.string.equalsIgnoreCase", expectation = expected,
                 predicate = { v, e -> e.equals(v, true) }
+        )
+        fun isInteger() = selfRule<String?, Unit>(
+                id = "validations.string.isInteger", expectation = Unit, predicate =
+                    { v, e -> v?.asSequence()?.filter { !it.isDigit() }?.firstOrNull() == null }
         )
     }
 
@@ -220,6 +227,7 @@ object Validations {
     private fun <T> display(o:T):String {
         return when (o) {
             is String -> "\"$o\""
+            is Unit -> ""
             else -> o?.toString()?:"NULL"
         }
     }

@@ -1,5 +1,7 @@
 package io.retable.validation
 
+import io.retable.validation.Validations.Numbers.inRange
+import io.retable.validation.Validations.Strings.length
 import org.junit.jupiter.api.Test
 import strikt.api.Assertion
 import strikt.api.expect
@@ -26,7 +28,7 @@ class ValidationsTest {
 
     @Test
     fun `should validate string length`() {
-        val rule = Validations.Strings.length(Validations.Numbers.inRange(IntRange(4, 10)))
+        val rule = length(inRange(4..10))
         expect(rule.validate("test")) {
             rule().isEqualTo(rule)
             subject().isEqualTo("test")
