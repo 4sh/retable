@@ -88,7 +88,7 @@ data class RuleCheck<S, V, E, R>(val rule:ValidationRule<S, V, E, R>,
 ) {
     fun message() = messageTemplate.buildDefaultMessage(this)
     fun i18nMessage() = messageTemplate.buildI18nMessage(rule.i18nResolver, this)
-    fun isValid() = severity == ValidationSeverity.OK
+    fun isValid() = when (severity) { ValidationSeverity.OK, ValidationSeverity.WARN -> true else -> false }
 }
 
 
@@ -122,33 +122,40 @@ data class RuleCheckMessageTemplate<S, V, E, R>(
  */
 object Validations {
     object Numbers {
-        fun <S : Number> equals(expected:S) = selfRule<S,S>(
+        fun <S : Number?> equals(expected:S) = selfRule<S,S>(
                 id = "validations.numbers.equals", expectation = expected, predicate = { v, e -> v == e })
-        fun <S : Number> greaterThan(expected:S) = selfRule<S,S>(
+        fun <S : Number?> greaterThan(expected:S) = selfRule<S,S>(
                 id = "validations.numbers.greaterThan", expectation = expected,
-                predicate = { v, e -> v.toDouble() > e.toDouble() })
-        fun <S : Number> lowerThan(expected:S) = selfRule<S,S>(
+                predicate = { v, e -> v != null && v.toDouble() < e?.toDouble()?:0.0 })
+        fun <S : Number?> lowerThan(expected:S) = selfRule<S,S>(
                 id = "validations.numbers.lowerThan", expectation = expected,
-                predicate = { v, e -> v.toDouble() < e.toDouble() })
-        fun inRange(expected:IntRange) = selfRule<Int,IntRange>(
+                predicate = { v, e -> v != null && v.toDouble() < e?.toDouble()?:0.0 })
+        fun inRange(expected:IntRange) = selfRule<Int?,IntRange>(
                 id = "validations.numbers.inRange", expectation = expected,
-                predicate = { v, e -> e.contains(v) })
-        fun inRange(expected:LongRange) = selfRule<Long,LongRange>(
+                predicate = { v, e -> v != null && e.contains(v) })
+        fun inRange(expected:LongRange) = selfRule<Long?,LongRange>(
                 id = "validations.numbers.inRange", expectation = expected,
-                predicate = { v, e -> e.contains(v) })
+                predicate = { v, e -> v != null && e.contains(v) })
     }
 
     object Strings {
-        fun <E> length(expected:ValidationRule<Int, Int, E, Unit>) = rule(
+        fun <E> length(expected:ValidationRule<Int?, Int?, E, Unit>) = rule(
                 id = "validations.string.length",
                 expectation = expected,
-                property = ValidationProperty<String,Int>("length", { it.length }),
-                okMessage = "`{subject}` {property} {result}",
-                nokMessage = "`{subject}` {property} {result}",
+                property = ValidationProperty<String?,Int>("length", { it?.length?:0 }),
+                okMessage = "{subject} {property} {result}",
+                nokMessage = "{subject} {property} {result}",
                 predicate = { v, e ->
                     val result = e.validate(v)
                     return@rule result.isValid() to result
                 }
+        )
+        fun equals(expected:String) = selfRule<String?, String>(
+                id = "validations.string.equals", expectation = expected, predicate = { v, e -> v == e }
+        )
+        fun equalsIgnoreCase(expected:String) = selfRule<String?, String>(
+                id = "validations.string.equalsIgnoreCase", expectation = expected,
+                predicate = { v, e -> e.equals(v, true) }
         )
     }
 
@@ -203,13 +210,19 @@ object Validations {
     fun <S, V, E, R> context():(RuleCheck<S, V, E, R>) -> Map<String,*> =
             {
                 mapOf(
-                    "subject" to it.subject,
+                    "subject" to display(it.subject),
                     "property" to it.rule.property.name,
-                    "value" to it.value,
-                    "result" to (if (it.result is RuleCheck<*,*,*,*>) { it.result.message() } else { it }),
-                    "expectation" to it.rule.expectation
+                    "value" to display(it.value),
+                    "result" to (if (it.result is RuleCheck<*,*,*,*>) { it.result.message() } else { display(it) }),
+                    "expectation" to display(it.rule.expectation)
                 )
             }
+    private fun <T> display(o:T):String {
+        return when (o) {
+            is String -> "\"$o\""
+            else -> o?.toString()?:"NULL"
+        }
+    }
 
     var i18nResolver:(String) -> String = { throw UnsupportedOperationException("i18n not implemented by default") }
 }

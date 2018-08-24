@@ -32,7 +32,7 @@ class ValidationsTest {
             subject().isEqualTo("test")
             value().isEqualTo(4)
             severity().isEqualTo(ValidationSeverity.OK)
-            message().isEqualTo("`test` length 4 is inRange 4..10")
+            message().isEqualTo("\"test\" length 4 is inRange 4..10")
         }
 
         expect(rule.validate("te")) {
@@ -40,7 +40,7 @@ class ValidationsTest {
             subject().isEqualTo("te")
             value().isEqualTo(2)
             severity().isEqualTo(ValidationSeverity.ERROR)
-            message().isEqualTo("`te` length 2 should be inRange 4..10")
+            message().isEqualTo("\"te\" length 2 should be inRange 4..10")
         }
     }
 
