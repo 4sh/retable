@@ -1,5 +1,8 @@
 package io.retable
 
+import io.retable.validation.Validations
+import io.retable.validation.Validations.Numbers.inRange
+import io.retable.validation.Validations.Strings.length
 import org.junit.jupiter.api.Test
 import strikt.api.expect
 import strikt.assertions.isEqualTo
@@ -109,5 +112,64 @@ class RetableExamplesTest {
         }
 
         expectOut("Hello Xavier Hanin, Hello Victor Hugo")
+    }
+
+    @Test
+    fun `should validation example work`() {
+        File(pathTo("invalid_data.csv")).inputStream().use {
+            val retable = Retable
+                    .csv(
+                            // we can set constraints on the columns
+                            object:RetableColumns() {
+                                val FIRST_NAME = string("first_name",
+                                                    constraint = length(inRange(3..20)))
+                                val LAST_NAME  = string("last_name")
+                                // an int column will automatically check the value is an int
+                                val AGE        = int("age",
+                                        constraint = inRange(0..120))
+                            })
+                    .read(it)
+
+            retable.columns.apply {
+                val hello = retable.records
+                        .filter { it.isValid() } // we can check if a record is valid, and filter it out if we want
+                        .map { "Hello ${it[FIRST_NAME]} ${it[LAST_NAME]}" }
+                        .joinToString()
+                println(hello)          // prints `Hello Victor Hugo`
+
+                // once the sequence of records has been consumed, the invalid records
+                // are available in a list
+                val invalid = retable.violations.records
+                        .map {
+                            "line ${it.lineNumber} - ${it[FIRST_NAME]} ${it[LAST_NAME]}\n" +
+                            "violations:\n" +
+                            it.violations
+                                     .map { "${it.severity.name} - ${it.message()}" }
+                                     .joinToString("\n")
+                        }
+                        .joinToString("\n")
+                println(invalid)    // prints:
+                                    // ---
+                                    // line 2 - Xavier Hanin
+                                    // violations:
+                                    // ERROR - age 242 should be inRange 0..120
+                                    // line 3 - A Dalton
+                                    // violations:
+                                    // ERROR - first_name "A" length 1 should be inRange 3..20
+                                    // ERROR - age "TWELVE" should be isInteger
+                                    // ---
+            }
+        }
+
+        expectOut("""
+            Hello Victor Hugo
+            line 2 - Xavier Hanin
+            violations:
+            ERROR - age 241 should be inRange 0..120
+            line 3 - A Dalton
+            violations:
+            ERROR - first_name "A" length 1 should be inRange 3..20
+            ERROR - age "TWELVE" should be isInteger
+            """)
     }
 }

@@ -1,5 +1,6 @@
 package io.retable
 
+import io.retable.validation.Validations
 import java.io.InputStream
 import kotlin.reflect.full.isSubclassOf
 import kotlin.reflect.full.memberProperties
@@ -88,8 +89,27 @@ abstract class BaseSupport<T : RetableColumns, O : ReadOptions>(val columns: Ret
         return Retable(
                 columns as T,
                 rawData.asSequence()
-                        .mapIndexed {index, raw ->
-                            RetableRecord(columns, index + 1L, rawData.lineNumber, raw)},
+                        .mapIndexed { index, raw ->
+                            val record = RetableRecord(columns, index + 1L, rawData.lineNumber, raw)
+
+                            record.checks = columns.list()
+                                    .map { col ->
+                                        val rawCheck = col.rawDataConstraint.validate(record)
+
+                                        return@map if (rawCheck.isValid()) {
+                                            col.dataConstraint.validate(record)
+                                        } else {
+                                            rawCheck
+                                        }
+                                    }
+                                    .toList()
+
+                            if (!record.isValid()) {
+                                violations.records.add(record)
+                            }
+
+                            return@mapIndexed record
+                        },
                 violations)
     }
 
@@ -113,7 +133,9 @@ abstract class RetableColumns {
     companion object {
         fun ofNames(names:List<String>,
                     headerRule: (RetableColumn<*>) -> HeaderConstraint = HeaderConstraints.eq)
-                = ofCols(names.mapIndexed { index, s -> StringRetableColumn(index + 1, s, headerRule) }.toList())
+                = ofCols(names  .mapIndexed { index, s ->
+                                    StringRetableColumn(index + 1, s, headerRule, DataConstraints.none()) }
+                                .toList())
         fun ofCols(cols:List<RetableColumn<*>>) = ListRetableColumns(cols)
         val auto = ListRetableColumns(listOf())
     }
@@ -124,16 +146,19 @@ abstract class RetableColumns {
             .filter { it.returnType.jvmErasure.isSubclassOf(RetableColumn::class) }
             .map { it.call(this) }
             .filterIsInstance(RetableColumn::class.java)
+            .sortedBy { it.index }
             .toList()
 
     operator fun get(index:Int) = list().find { it.index == index } ?: throw ArrayIndexOutOfBoundsException(index)
 
     fun string(name:String,
-               headerConstraint: (RetableColumn<*>) ->  HeaderConstraint = HeaderConstraints.eq) =
-            StringRetableColumn(c++, name, headerConstraint)
+               headerConstraint: (RetableColumn<String>) ->  HeaderConstraint = HeaderConstraints.eq,
+               constraint: DataValueConstraint<String?, *> = DataConstraints.none()) =
+            StringRetableColumn(c++, name, headerConstraint, constraint)
     fun int(name:String,
-            headerConstraint: (RetableColumn<*>) ->  HeaderConstraint = HeaderConstraints.eq) =
-            IntRetableColumn(c++, name, headerConstraint)
+            headerConstraint: (RetableColumn<Int>) ->  HeaderConstraint = HeaderConstraints.eq,
+            constraint: DataValueConstraint<Int?, *> = DataConstraints.none()) =
+            IntRetableColumn(c++, name, headerConstraint, constraint)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -151,12 +176,15 @@ class ListRetableColumns(private val cols:List<RetableColumn<*>>):RetableColumns
 }
 
 abstract class RetableColumn<T>(val index:Int, val name:String,
-                                headerRule: (RetableColumn<*>) -> HeaderConstraint) {
-    val headerConstraint:HeaderConstraint
-
-    init {
-        headerConstraint = headerRule.invoke(this)
-    }
+                                headerRule: (RetableColumn<T>) -> HeaderConstraint,
+                                rawConstraint: DataValueConstraint<String?, *>,
+                                constraint: DataValueConstraint<T?, *>) {
+    val headerConstraint:HeaderConstraint =
+            headerRule.invoke(this)
+    val rawDataConstraint:DataConstraint =
+            DataConstraints.rawColConstraint(this, rawConstraint)
+    val dataConstraint:DataConstraint =
+            DataConstraints.colConstraint(this, constraint)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -183,13 +211,16 @@ abstract class RetableColumn<T>(val index:Int, val name:String,
 }
 
 class StringRetableColumn(index:Int, name:String,
-                          headerConstraint: (RetableColumn<*>) ->  HeaderConstraint)
-    : RetableColumn<String>(index, name, headerConstraint) {
+                          headerConstraint: (RetableColumn<String>) ->  HeaderConstraint,
+                          constraint: DataValueConstraint<String?, *>)
+    : RetableColumn<String>(index, name, headerConstraint, DataConstraints.none(), constraint) {
     override fun getFromRaw(raw: String): String = raw
 }
 class IntRetableColumn(index:Int, name:String,
-                       headerConstraint: (RetableColumn<*>) ->  HeaderConstraint)
-    : RetableColumn<Int>(index, name, headerConstraint) {
+                       headerConstraint: (RetableColumn<Int>) ->  HeaderConstraint,
+                       constraint: DataValueConstraint<Int?, *>)
+    : RetableColumn<Int>(index, name, headerConstraint, Validations.Strings.isInteger(), constraint) {
+
     override fun getFromRaw(raw: String): Int = raw.toInt()
 }
 
@@ -200,15 +231,24 @@ data class RetableRecord(val columns: RetableColumns,
                          val recordNumber: Long,
                          val lineNumber: Long,
                          val rawData: List<String>
-                         ) {
+) {
+    var checks: List<DataConstraintCheck> = listOf()
+
+    val violations:List<DataConstraintCheck>
+        get() = checks.filter { !it.isValid() }
+
     operator fun get(c:String):String? {
         return columns.list()
                 .find { it.name == c }
                 ?.let { rawData.get(it.index - 1) }
     }
 
-    operator fun <T> get(c:RetableColumn<T>):T? {
-        return c.getFromRaw(rawData.get(c.index - 1))
+    operator fun <T> get(c:RetableColumn<T>):T? = rawGet(c)?.let { c.getFromRaw(it) }
+
+    fun <T> rawGet(c:RetableColumn<T>):String? = rawData.get(c.index - 1)
+
+    fun isValid(): Boolean {
+        return violations.isEmpty()
     }
 }
 
