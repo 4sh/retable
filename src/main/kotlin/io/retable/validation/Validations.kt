@@ -186,6 +186,12 @@ object Validations {
                     { v, e -> v?.asSequence()?.filter { !it.isDigit() }?.firstOrNull() == null },
                 message = MsgTpl("an integer")
         )
+        fun matches(regex:Regex, message:String = "match {expectation}") = selfRule<String?, Regex>(
+                id = "validations.string.equals", expectation = regex,
+                predicate = { v, e -> v?.let { e.matches(it) }?:false },
+                message = MsgTpl(message = "{subject} {property} {value} {verb} ${message}",
+                                 okVerb = "", nokVerb = "should")
+        )
     }
 
 

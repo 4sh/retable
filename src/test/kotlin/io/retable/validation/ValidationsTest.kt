@@ -2,6 +2,7 @@ package io.retable.validation
 
 import io.retable.validation.Validations.Numbers.inRange
 import io.retable.validation.Validations.Strings.length
+import io.retable.validation.Validations.Strings.matches
 import org.junit.jupiter.api.Test
 import strikt.api.Assertion
 import strikt.api.expect
@@ -43,6 +44,26 @@ class ValidationsTest {
             value().isEqualTo(2)
             severity().isEqualTo(ValidationSeverity.ERROR)
             message().isEqualTo("\"te\" length 2 should be between 4 and 10")
+        }
+    }
+
+    @Test
+    fun `should validate string against pattern`() {
+        val rule = matches(Regex("[abc]{3}"), "contain 3 characters among abc")
+        expect(rule.validate("test")) {
+            rule().isEqualTo(rule)
+            subject().isEqualTo("test")
+            value().isEqualTo("test")
+            severity().isEqualTo(ValidationSeverity.ERROR)
+            message().isEqualTo("\"test\" should contain 3 characters among abc")
+        }
+
+        expect(rule.validate("cab")) {
+            rule().isEqualTo(rule)
+            subject().isEqualTo("cab")
+            value().isEqualTo("cab")
+            severity().isEqualTo(ValidationSeverity.OK)
+            message().isEqualTo("\"cab\"  contain 3 characters among abc")
         }
     }
 
