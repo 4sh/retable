@@ -107,18 +107,17 @@ data class RuleCheckMessageTemplate<S, V, E, R>(
                             ruleCheck)
 
     private fun buildMessage(template:String, ruleCheck: RuleCheck<S, V, E, R>): String =
-            interpolate(template, context(ruleCheck))
-
-    private fun interpolate(template: String, context: Map<String, *>): String {
-        // very naive templating mechanism
-        var msg = template
-        context.forEach {
-            msg = msg.replace("{${it.key}}", it.value?.toString()?:"")
-        }
-        return msg.trim()
-    }
+            template.interpolate(context(ruleCheck))
 }
 
+fun String.interpolate(context: Map<String, *>): String {
+    // very naive templating mechanism
+    var msg = this
+    context.forEach {
+        msg = msg.replace("{${it.key}}", it.value?.toString()?:"")
+    }
+    return msg.trim()
+}
 
 /**
  * Validations provides a bunch of useful ValidationRule
@@ -146,8 +145,7 @@ object Validations {
                 id = "validations.string.length",
                 expectation = expected,
                 property = ValidationProperty<String?,Int>("length", { it?.length?:0 }),
-                okMessage = "{subject} {property} {result}",
-                nokMessage = "{subject} {property} {result}",
+                message = MsgTpl(message = "{subject} {property} {result}"),
                 predicate = { v, e ->
                     val result = e.validate(v)
                     return@rule result.isValid() to result
@@ -170,16 +168,15 @@ object Validations {
 
     // helpers
     fun <S, V, E, R> rule(id:String,
-                       name:String = id.substringAfterLast('.'),
-                       property: ValidationProperty<S,V>,
-                       severity: ValidationSeverity = ValidationSeverity.ERROR,
-                       expectation: E,
-                       predicate: (V, E) -> Pair<Boolean, R>,
-                       okMessage:String = "{subject} {property} {value} is ${name} {expectation}",
-                       nokMessage:String = "{subject} {property} {value} should be ${name} {expectation}",
-                       validMessage: RuleCheckMessageTemplate<S, V, E, R> = Validations.okMessage(okMessage),
-                       invalidMessage: RuleCheckMessageTemplate<S, V, E, R> = Validations.nokMessage(nokMessage),
-                       i18nResolver: (String) -> String = Validations.i18nResolver
+                          name:String = id.substringAfterLast('.'),
+                          property: ValidationProperty<S,V>,
+                          severity: ValidationSeverity = ValidationSeverity.ERROR,
+                          expectation: E,
+                          predicate: (V, E) -> Pair<Boolean, R>,
+                          message:MsgTpl<S, V, E, R> = MsgTpl(name),
+                          validMessage: RuleCheckMessageTemplate<S, V, E, R> = message.okMessage(),
+                          invalidMessage: RuleCheckMessageTemplate<S, V, E, R> = message.nokMessage(),
+                          i18nResolver: (String) -> String = Validations.i18nResolver
     ):ValidationRule<S, V, E, R> = ValidationRule(
             id = id, name = name,
             property = property, severity = severity,
@@ -190,15 +187,14 @@ object Validations {
             invalidMessage  = invalidMessage
     )
     fun <S, E> selfRule(id:String,
-                     name:String = id.substringAfterLast('.'),
-                     severity: ValidationSeverity = ValidationSeverity.ERROR,
-                     expectation: E,
-                     predicate: (S, E) -> Boolean,
-                     okMessage:String = "{value} is ${name} {expectation}",
-                     nokMessage:String = "{value} should be ${name} {expectation}",
-                     validMessage: RuleCheckMessageTemplate<S, S, E, Unit> = Validations.okMessage(okMessage),
-                     invalidMessage: RuleCheckMessageTemplate<S, S, E, Unit> = Validations.nokMessage(nokMessage),
-                     i18nResolver: (String) -> String = Validations.i18nResolver
+                        name:String = id.substringAfterLast('.'),
+                        severity: ValidationSeverity = ValidationSeverity.ERROR,
+                        expectation: E,
+                        predicate: (S, E) -> Boolean,
+                        messageBuilder:MsgTpl<S, S, E, Unit> = MsgTpl(name),
+                        validMessage: RuleCheckMessageTemplate<S, S, E, Unit> = messageBuilder.okMessage(),
+                        invalidMessage: RuleCheckMessageTemplate<S, S, E, Unit> = messageBuilder.nokMessage(),
+                        i18nResolver: (String) -> String = Validations.i18nResolver
     ) = ValidationRule(
             id = id, name = name,
             property = self(), severity = severity,
@@ -209,16 +205,27 @@ object Validations {
             invalidMessage  = invalidMessage
     )
 
-    fun <S, V, E, R> okMessage(msg:String) = RuleCheckMessageTemplate(".ok", msg, context<S, V, E, R>())
-    fun <S, V, E, R> nokMessage(msg:String) = RuleCheckMessageTemplate(".nok", msg, context<S, V, E, R>())
+    class MsgTpl<S, V, E, R>(
+            name:String = "",
+            message:String = "{subject} {property} {value} {verb} {name} {expectation}",
+            okVerb:String = "is",
+            nokVerb:String = "should be",
+            private val context: (RuleCheck<S, V, E, R>) -> Map<String,*> = Validations.context(),
+            private val okMessage:String = message.interpolate(mapOf("verb" to okVerb, "name" to name)),
+            private val nokMessage:String = message.interpolate(mapOf("verb" to nokVerb, "name" to name))
+            ) {
+        fun okMessage() = RuleCheckMessageTemplate(".ok", okMessage, context)
+        fun nokMessage() = RuleCheckMessageTemplate(".nok", nokMessage, context)
+    }
 
     fun <S> self(): ValidationProperty<S, S> = ValidationProperty("self", { it })
 
     fun <S, V, E, R> context():(RuleCheck<S, V, E, R>) -> Map<String,*> =
             {
+                val self = it.rule.property.name == "self"
                 mapOf(
-                    "subject" to display(it.subject),
-                    "property" to it.rule.property.name,
+                    "subject" to if (self) "" else display(it.subject),
+                    "property" to if (self) "" else it.rule.property.name,
                     "value" to display(it.value),
                     "result" to (if (it.result is RuleCheck<*,*,*,*>) { it.result.message() } else { display(it) }),
                     "expectation" to display(it.rule.expectation)

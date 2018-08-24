@@ -1,6 +1,8 @@
 package io.retable
 
 import io.retable.validation.*
+import io.retable.validation.Validations.MsgTpl
+import io.retable.validation.Validations.rule
 
 typealias HeaderValueConstraint = ValidationRule<String?, String?, String, Unit>
 typealias HeaderValueCheck = RuleCheck<String?, String?, String, Unit>
@@ -32,7 +34,7 @@ object HeaderConstraints {
             id = "validations.header.missing",
             expectation = "not null", predicate = { v,e -> v != null })
     fun constraint(column: RetableColumn<*>, rule: HeaderValueConstraint) =
-            Validations.rule<Headers, String?, RetableColumn<*>, HeaderValueCheck>(
+            rule<Headers, String?, RetableColumn<*>, HeaderValueCheck>(
                     id = "validations.retable.header.${rule.name}",
                     property = ValidationProperty("[${column.index}] header", { it.get(column) }),
                     expectation = column,
@@ -44,8 +46,7 @@ object HeaderConstraints {
                         }
                         return@rule check.isValid() to check
                     },
-                    okMessage = "column {property} {result}",
-                    nokMessage = "column {property} {result}"
+                    message = MsgTpl(message = "column {property} {result}")
             )
 
     val eq: (RetableColumn<*>) -> HeaderConstraint
@@ -59,22 +60,20 @@ object DataConstraints {
             ValidationProperty<RetableRecord, String?>(col.name, { it.rawGet(col) })
 
     fun rawColConstraint(col:RetableColumn<*>, valueConstraint: DataValueConstraint<String?, *>) =
-            Validations.rule(
+            rule(
                     id = "validations.data.${valueConstraint.name}",
                     property = rawColProperty(col),
                     expectation = valueConstraint,
                     predicate = { v,e -> e.validate(v).toPair() },
-                    okMessage = "{property} {result}",
-                    nokMessage = "{property} {result}"
+                    message = MsgTpl(message = "{property} {result}")
             ) as DataConstraint
     fun <T> colConstraint(col:RetableColumn<T>, valueConstraint: DataValueConstraint<T?, *>) =
-            Validations.rule(
+            rule(
                     id = "validations.data.${valueConstraint.name}",
                     property = rawColProperty(col),
                     expectation = valueConstraint,
                     predicate = { v,e -> e.validate(v?.let { col.getFromRaw(it) }).toPair() },
-                    okMessage = "{property} {result}",
-                    nokMessage = "{property} {result}"
+                    message = MsgTpl(message = "{property} {result}")
             ) as DataConstraint
 
     fun <T> none():DataValueConstraint<T?, *> =
