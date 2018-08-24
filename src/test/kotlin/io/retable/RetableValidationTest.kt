@@ -1,6 +1,8 @@
 package io.retable
 
 import io.retable.validation.ValidationSeverity
+import io.retable.validation.Validations.Numbers.inRange
+import io.retable.validation.Validations.Strings.length
 import org.junit.jupiter.api.Test
 import strikt.api.Assertion
 import strikt.api.expect
@@ -56,6 +58,43 @@ class RetableValidationTest {
         expect(retable.violations.header[0].message()).isEqualTo(
                 "column [1] header \"first\" is equal ignoring case to \"FIRST\"")
     }
+
+    @Test
+    fun `should validate data`() {
+        val csv = """
+            first,second,age
+            Joe,Dalton,TWELV
+            V,Hugo,124
+            Xavier,Hanin,41
+        """.trimIndent()
+
+        val columns = object : RetableColumns() {
+            val first = string("first", constraint = length(inRange(2..20)))
+            val second = string("second")
+            val age = int("age", constraint = inRange(0..120))
+        }
+
+        val retable = Retable.csv(columns = columns)
+                .read(ByteArrayInputStream(csv.toByteArray(Charsets.UTF_8)))
+
+        // no violations collected before we read the file
+        expect(retable.violations.records.isEmpty())
+
+        // should be able to filter valid records
+        val validRecords = retable.records.filter { it.isValid() }.toList()
+
+        expect(validRecords).hasSize(1)
+        expect(validRecords[0][columns.first]).isEqualTo("Xavier")
+
+        expect(retable.violations.records).hasSize(2)
+        expect(retable.violations.records[0].violations).hasSize(1)
+        expect(retable.violations.records[0].violations[0].message()).isEqualTo("age \"TWELV\" should be an integer")
+
+        expect(retable.violations.records[1].violations).hasSize(2)
+        expect(retable.violations.records[1].violations[0].message()).isEqualTo("first \"V\" length 1 should be between 2 and 20")
+        expect(retable.violations.records[1].violations[1].message()).isEqualTo("age 124 should be between 0 and 120")
+    }
+
 
     // helper extensions
     fun <T : Sequence<E>, E> Assertion.Builder<T>.containsExactly(vararg elements: E): Assertion.Builder<List<E>>
