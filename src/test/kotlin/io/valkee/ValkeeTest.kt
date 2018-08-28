@@ -8,7 +8,7 @@ import strikt.api.Assertion
 import strikt.api.expect
 import strikt.assertions.isEqualTo
 
-class ValidationsTest {
+class ValkeeTest {
     @Test
     fun `should validate int range`() {
         val rule = Validations.Numbers.inRange(IntRange(0, 10))
