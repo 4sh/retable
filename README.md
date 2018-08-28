@@ -106,7 +106,7 @@ File(pathTo("simple_data.csv")).inputStream().use {
 
 ### Validation
 
-By default retable validates the format for typed columns (such as int columns). You can also set up additional constraints that qre checked by retable while reading the records. 
+By default retable validates the format for typed columns (such as int columns). You can also set up additional constraints that are checked by retable while reading the records. 
 
 ```kotlin
 File(pathTo("invalid_data.csv")).inputStream().use {
