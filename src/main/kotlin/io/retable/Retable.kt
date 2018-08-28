@@ -1,6 +1,6 @@
 package io.retable
 
-import io.retable.validation.Validations
+import io.valkee.Validations
 import java.io.InputStream
 import kotlin.reflect.full.isSubclassOf
 import kotlin.reflect.full.memberProperties

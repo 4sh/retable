@@ -1,4 +1,4 @@
-package io.retable.validation
+package io.valkee
 
 /**
  * A validation rule is responsible for validating property values on subjects against an expectation.
@@ -61,14 +61,14 @@ data class ValidationRule<S, V, E, R>(
         val id:String,
         val name:String,
         val severity: ValidationSeverity = ValidationSeverity.ERROR,
-        val property: ValidationProperty<S,V>,
+        val property: ValidationProperty<S, V>,
         val expectation: E,
         val predicate: (V, E) -> Pair<Boolean, R>,
         val validMessage: RuleCheckMessageTemplate<S, V, E, R>,
         val invalidMessage: RuleCheckMessageTemplate<S, V, E, R>,
         val i18nResolver: (String) -> String
 ) {
-    fun validate(subject:S):RuleCheck<S, V, E, R> {
+    fun validate(subject:S): RuleCheck<S, V, E, R> {
         val value = property.accessor(subject)
         val result = predicate(value, expectation)
         return if (result.first) {
@@ -79,12 +79,12 @@ data class ValidationRule<S, V, E, R>(
     }
 }
 
-data class RuleCheck<S, V, E, R>(val rule:ValidationRule<S, V, E, R>,
-                              val subject:S,
-                              val value:V,
-                              val result:R,
-                              val severity:ValidationSeverity,
-                              val messageTemplate:RuleCheckMessageTemplate<S, V, E, R>
+data class RuleCheck<S, V, E, R>(val rule: ValidationRule<S, V, E, R>,
+                                 val subject:S,
+                                 val value:V,
+                                 val result:R,
+                                 val severity: ValidationSeverity,
+                                 val messageTemplate: RuleCheckMessageTemplate<S, V, E, R>
 ) {
     fun message() = messageTemplate.buildDefaultMessage(this)
     fun i18nMessage() = messageTemplate.buildI18nMessage(rule.i18nResolver, this)
@@ -110,14 +110,14 @@ data class RuleCheckMessageTemplate<S, V, E, R>(
             template.interpolate(context(Context(ruleCheck)))
 
     data class Context<S, V, E, R>(
-            val check:RuleCheck<S, V, E, R>,
-            val rule:ValidationRule<S,V,E,R> = check.rule,
+            val check: RuleCheck<S, V, E, R>,
+            val rule: ValidationRule<S, V, E, R> = check.rule,
             val subject: S = check.subject,
             val value:V = check.value,
             val expectation:E = check.rule.expectation,
             val result:R = check.result,
             val valid:Boolean = check.isValid(),
-            val severity:ValidationSeverity = check.severity
+            val severity: ValidationSeverity = check.severity
     )
 }
 
@@ -136,36 +136,40 @@ fun String.interpolate(context: Map<String, *>): String {
  */
 object Validations {
     object Numbers {
-        fun <S : Number?> equals(expected:S) = selfRule<S,S>(
+        fun <S : Number?> equals(expected:S) = selfRule<S, S>(
                 id = "validations.numbers.equals", expectation = expected, predicate = { v, e -> v == e },
                 message = MsgTpl("equal to"))
-        fun <S : Number?> greaterThan(expected:S) = selfRule<S,S>(
+        fun <S : Number?> greaterThan(expected:S) = selfRule<S, S>(
                 id = "validations.numbers.greaterThan", expectation = expected,
-                predicate = { v, e -> v != null && v.toDouble() < e?.toDouble()?:0.0 },
+                predicate = { v, e -> v != null && v.toDouble() < e?.toDouble() ?: 0.0 },
                 message = MsgTpl("greater than"))
-        fun <S : Number?> lowerThan(expected:S) = selfRule<S,S>(
+        fun <S : Number?> lowerThan(expected:S) = selfRule<S, S>(
                 id = "validations.numbers.lowerThan", expectation = expected,
-                predicate = { v, e -> v != null && v.toDouble() < e?.toDouble()?:0.0 },
+                predicate = { v, e -> v != null && v.toDouble() < e?.toDouble() ?: 0.0 },
                 message = MsgTpl("lower than"))
-        fun inRange(expected:IntRange) = selfRule<Int?,IntRange>(
+        fun inRange(expected:IntRange) = selfRule<Int?, IntRange>(
                 id = "validations.numbers.inRange", expectation = expected,
                 predicate = { v, e -> v != null && e.contains(v) },
                 message = MsgTpl(rule = "between",
-                        context = context({ mapOf(
-                                "expectation" to "${expectation.first} and ${expectation.last}") })))
-        fun inRange(expected:LongRange) = selfRule<Long?,LongRange>(
+                        context = context({
+                            mapOf(
+                                    "expectation" to "${expectation.first} and ${expectation.last}")
+                        })))
+        fun inRange(expected:LongRange) = selfRule<Long?, LongRange>(
                 id = "validations.numbers.inRange", expectation = expected,
                 predicate = { v, e -> v != null && e.contains(v) },
                 message = MsgTpl(rule = "between",
-                        context = context({ mapOf(
-                                "expectation" to "${expectation.first} and ${expectation.last}") })))
+                        context = context({
+                            mapOf(
+                                    "expectation" to "${expectation.first} and ${expectation.last}")
+                        })))
     }
 
     object Strings {
-        fun <E> length(expected:ValidationRule<Int?, Int?, E, Unit>) = rule(
+        fun <E> length(expected: ValidationRule<Int?, Int?, E, Unit>) = rule(
                 id = "validations.string.length",
                 expectation = expected,
-                property = ValidationProperty<String?,Int>("length", { it?.length?:0 }),
+                property = ValidationProperty<String?, Int>("length", { it?.length ?: 0 }),
                 message = MsgTpl(message = "{subject} {property} {result}"),
                 predicate = { v, e ->
                     val result = e.validate(v)
@@ -183,14 +187,14 @@ object Validations {
         )
         fun isInteger() = selfRule<String?, Unit>(
                 id = "validations.string.isInteger", expectation = Unit, predicate =
-                    { v, e -> v?.asSequence()?.filter { !it.isDigit() }?.firstOrNull() == null },
+        { v, e -> v?.asSequence()?.filter { !it.isDigit() }?.firstOrNull() == null },
                 message = MsgTpl("an integer")
         )
         fun matches(regex:Regex, message:String = "match {expectation}") = selfRule<String?, Regex>(
                 id = "validations.string.equals", expectation = regex,
-                predicate = { v, e -> v?.let { e.matches(it) }?:false },
+                predicate = { v, e -> v?.let { e.matches(it) } ?: false },
                 message = MsgTpl(message = "{subject} {property} {value} {verb} ${message}",
-                                 okVerb = "", nokVerb = "should")
+                        okVerb = "", nokVerb = "should")
         )
     }
 
@@ -199,40 +203,40 @@ object Validations {
     // helpers
     fun <S, V, E, R> rule(id:String,
                           name:String = id.substringAfterLast('.'),
-                          property: ValidationProperty<S,V>,
+                          property: ValidationProperty<S, V>,
                           severity: ValidationSeverity = ValidationSeverity.ERROR,
                           expectation: E,
                           predicate: (V, E) -> Pair<Boolean, R>,
-                          message:MsgTpl<S, V, E, R> = MsgTpl(name),
+                          message: MsgTpl<S, V, E, R> = MsgTpl(name),
                           validMessage: RuleCheckMessageTemplate<S, V, E, R> = message.okMessage(),
                           invalidMessage: RuleCheckMessageTemplate<S, V, E, R> = message.nokMessage(),
                           i18nResolver: (String) -> String = Validations.i18nResolver
-    ):ValidationRule<S, V, E, R> = ValidationRule(
+    ): ValidationRule<S, V, E, R> = ValidationRule(
             id = id, name = name,
             property = property, severity = severity,
-            expectation     = expectation,
-            predicate       = predicate,
-            i18nResolver    = i18nResolver,
-            validMessage    = validMessage,
-            invalidMessage  = invalidMessage
+            expectation = expectation,
+            predicate = predicate,
+            i18nResolver = i18nResolver,
+            validMessage = validMessage,
+            invalidMessage = invalidMessage
     )
     fun <S, E> selfRule(id:String,
                         name:String = id.substringAfterLast('.'),
                         severity: ValidationSeverity = ValidationSeverity.ERROR,
                         expectation: E,
                         predicate: (S, E) -> Boolean,
-                        message:MsgTpl<S, S, E, Unit> = MsgTpl(name),
+                        message: MsgTpl<S, S, E, Unit> = MsgTpl(name),
                         validMessage: RuleCheckMessageTemplate<S, S, E, Unit> = message.okMessage(),
                         invalidMessage: RuleCheckMessageTemplate<S, S, E, Unit> = message.nokMessage(),
                         i18nResolver: (String) -> String = Validations.i18nResolver
     ) = ValidationRule(
             id = id, name = name,
             property = self(), severity = severity,
-            expectation     = expectation,
-            predicate       = { v,e -> return@ValidationRule predicate(v,e) to Unit },
-            i18nResolver    = i18nResolver,
-            validMessage    = validMessage,
-            invalidMessage  = invalidMessage
+            expectation = expectation,
+            predicate = { v, e -> return@ValidationRule predicate(v, e) to Unit },
+            i18nResolver = i18nResolver,
+            validMessage = validMessage,
+            invalidMessage = invalidMessage
     )
 
     class MsgTpl<S, V, E, R>(
@@ -240,7 +244,7 @@ object Validations {
             message:String = "{subject} {property} {value} {verb} {rule} {expectation}",
             okVerb:String = "is",
             nokVerb:String = "should be",
-            private val context: (RuleCheckMessageTemplate.Context<S, V, E, R>) -> Map<String,*> = Validations.context(),
+            private val context: (RuleCheckMessageTemplate.Context<S, V, E, R>) -> Map<String,*> = context(),
             private val okMessage:String = message.interpolate(mapOf("verb" to okVerb, "rule" to rule)),
             private val nokMessage:String = message.interpolate(mapOf("verb" to nokVerb, "rule" to rule))
             ) {
@@ -251,7 +255,7 @@ object Validations {
     fun <S> self(): ValidationProperty<S, S> = ValidationProperty("self", { it })
 
     fun <S, V, E, R> context(
-            custom:RuleCheckMessageTemplate.Context<S, V, E, R>.() -> Map<String,*> = { mapOf<String,Any>() }
+            custom: RuleCheckMessageTemplate.Context<S, V, E, R>.() -> Map<String,*> = { mapOf<String,Any>() }
     ):(RuleCheckMessageTemplate.Context<S, V, E, R>) -> Map<String,*> =
             {
                 val self = it.rule.property.name == "self"
@@ -259,7 +263,9 @@ object Validations {
                     "subject" to if (self) "" else display(it.subject),
                     "property" to if (self) "" else it.rule.property.name,
                     "value" to display(it.value),
-                    "result" to (if (it.result is RuleCheck<*,*,*,*>) { it.result.message() } else { display(it) }),
+                    "result" to (if (it.result is RuleCheck<*, *, *, *>) { it.result.message() } else {
+                        display(it)
+                    }),
                     "expectation" to display(it.expectation)
                 ).plus(custom.invoke(it))
             }

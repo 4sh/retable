@@ -1,8 +1,8 @@
 package io.retable
 
-import io.retable.validation.Validations
-import io.retable.validation.Validations.Numbers.inRange
-import io.retable.validation.Validations.Strings.length
+import io.valkee.Validations
+import io.valkee.Validations.Numbers.inRange
+import io.valkee.Validations.Strings.length
 import org.junit.jupiter.api.Test
 import strikt.api.expect
 import strikt.assertions.isEqualTo

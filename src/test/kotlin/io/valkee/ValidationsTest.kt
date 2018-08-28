@@ -1,8 +1,8 @@
-package io.retable.validation
+package io.valkee
 
-import io.retable.validation.Validations.Numbers.inRange
-import io.retable.validation.Validations.Strings.length
-import io.retable.validation.Validations.Strings.matches
+import io.valkee.Validations.Numbers.inRange
+import io.valkee.Validations.Strings.length
+import io.valkee.Validations.Strings.matches
 import org.junit.jupiter.api.Test
 import strikt.api.Assertion
 import strikt.api.expect
@@ -69,15 +69,15 @@ class ValidationsTest {
 
 
 
-    fun <S,V,E,R> Assertion.Builder<RuleCheck<S,V,E,R>>.rule(): Assertion.Builder<ValidationRule<S,V,E,R>>
-        = map(RuleCheck<S,V,E,R>::rule)
-    fun <S,V,E,R> Assertion.Builder<RuleCheck<S,V,E,R>>.subject(): Assertion.Builder<S>
-        = map(RuleCheck<S,V,E,R>::subject)
-    fun <S,V,E,R> Assertion.Builder<RuleCheck<S,V,E,R>>.value(): Assertion.Builder<V>
-        = map(RuleCheck<S,V,E,R>::value)
-    fun <S,V,E,R> Assertion.Builder<RuleCheck<S,V,E,R>>.severity(): Assertion.Builder<ValidationSeverity>
-        = map(RuleCheck<S,V,E,R>::severity)
-    fun <S,V,E,R> Assertion.Builder<RuleCheck<S,V,E,R>>.message(): Assertion.Builder<String>
-        = map(RuleCheck<S,V,E,R>::message)
+    fun <S,V,E,R> Assertion.Builder<RuleCheck<S, V, E, R>>.rule(): Assertion.Builder<ValidationRule<S, V, E, R>>
+        = map(RuleCheck<S, V, E, R>::rule)
+    fun <S,V,E,R> Assertion.Builder<RuleCheck<S, V, E, R>>.subject(): Assertion.Builder<S>
+        = map(RuleCheck<S, V, E, R>::subject)
+    fun <S,V,E,R> Assertion.Builder<RuleCheck<S, V, E, R>>.value(): Assertion.Builder<V>
+        = map(RuleCheck<S, V, E, R>::value)
+    fun <S,V,E,R> Assertion.Builder<RuleCheck<S, V, E, R>>.severity(): Assertion.Builder<ValidationSeverity>
+        = map(RuleCheck<S, V, E, R>::severity)
+    fun <S,V,E,R> Assertion.Builder<RuleCheck<S, V, E, R>>.message(): Assertion.Builder<String>
+        = map(RuleCheck<S, V, E, R>::message)
 }
 

@@ -1,8 +1,12 @@
 package io.retable
 
 import io.retable.validation.*
-import io.retable.validation.Validations.MsgTpl
-import io.retable.validation.Validations.rule
+import io.valkee.RuleCheck
+import io.valkee.ValidationProperty
+import io.valkee.ValidationRule
+import io.valkee.Validations
+import io.valkee.Validations.MsgTpl
+import io.valkee.Validations.rule
 
 typealias HeaderValueConstraint = ValidationRule<String?, String?, String, Unit>
 typealias HeaderValueCheck = RuleCheck<String?, String?, String, Unit>
@@ -77,6 +81,6 @@ object DataConstraints {
             ) as DataConstraint
 
     fun <T> none():DataValueConstraint<T?, *> =
-                Validations.selfRule(id = "validations.data.value.none", expectation = Unit, predicate = { _,_ -> true })
+                Validations.selfRule(id = "validations.data.value.none", expectation = Unit, predicate = { _, _ -> true })
 }
 
