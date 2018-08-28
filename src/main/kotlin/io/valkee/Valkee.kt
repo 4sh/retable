@@ -20,19 +20,19 @@ object Validations {
         fun inRange(expected:IntRange) = selfRule<Int?, IntRange>(
                 id = "validations.numbers.inRange", expectation = expected,
                 predicate = { v, e -> v != null && e.contains(v) },
-                message = MsgTpl(rule = "between",
-                        context = context({
-                            mapOf(
-                                    "expectation" to "${expectation.first} and ${expectation.last}")
-                        })))
+                message = MsgTpl(rule = "between"),
+                contextDataResolver = context({
+                    mapOf(
+                            "expectation" to "${expectation.first} and ${expectation.last}")
+                }))
         fun inRange(expected:LongRange) = selfRule<Long?, LongRange>(
                 id = "validations.numbers.inRange", expectation = expected,
                 predicate = { v, e -> v != null && e.contains(v) },
-                message = MsgTpl(rule = "between",
-                        context = context({
+                message = MsgTpl(rule = "between"),
+                        contextDataResolver = context({
                             mapOf(
                                     "expectation" to "${expectation.first} and ${expectation.last}")
-                        })))
+                        }))
     }
 
     object Strings {
@@ -77,49 +77,60 @@ object Validations {
                           severity: ValkeeSeverity = ValkeeSeverity.ERROR,
                           expectation: E,
                           predicate: (V, E) -> Pair<Boolean, R>,
-                          message: MsgTpl<S, V, E, R> = MsgTpl(name),
-                          validMessage: RuleCheckMessageTemplate<S, V, E, R> = message.okMessage(),
-                          invalidMessage: RuleCheckMessageTemplate<S, V, E, R> = message.nokMessage(),
-                          i18nResolver: (String) -> String = Validations.i18nResolver
+                          message: MsgTpl = MsgTpl(name),
+                          contextDataResolver: RuleCheckMessageTemplate.Context<S, V, E, R>.() -> Map<String,*> = context(),
+                          templateInterpolator: String.(Map<String, *>) -> String = Validations.templateInterpolate,
+                          templateResolver: String.(RuleCheckMessageTemplate.Context<S, V, E, R>) -> String =
+                                  { ctx -> templateInterpolator.invoke(this, contextDataResolver.invoke(ctx)) },
+                          i18nResolver: (String) -> String = Validations.i18nResolver,
+                          messageBuilder: ValkeeRuleMessageBuilder<S,V,E,R> = ValkeeRuleMessageBuilder(
+                                  validMessage = message.okMessage(),
+                                  invalidMessage = message.nokMessage(),
+                                  templateResolver = templateResolver,
+                                  i18nResolver = i18nResolver
+                          )
     ): ValkeeRule<S, V, E, R> = ValkeeRule(
             id = id, name = name,
             property = property, severity = severity,
             expectation = expectation,
             predicate = predicate,
-            i18nResolver = i18nResolver,
-            validMessage = validMessage,
-            invalidMessage = invalidMessage
+            messageBuilder = messageBuilder
     )
     fun <S, E> selfRule(id:String,
                         name:String = id.substringAfterLast('.'),
                         severity: ValkeeSeverity = ValkeeSeverity.ERROR,
                         expectation: E,
                         predicate: (S, E) -> Boolean,
-                        message: MsgTpl<S, S, E, Unit> = MsgTpl(name),
-                        validMessage: RuleCheckMessageTemplate<S, S, E, Unit> = message.okMessage(),
-                        invalidMessage: RuleCheckMessageTemplate<S, S, E, Unit> = message.nokMessage(),
-                        i18nResolver: (String) -> String = Validations.i18nResolver
+                        message: MsgTpl = MsgTpl(name),
+                        contextDataResolver: RuleCheckMessageTemplate.Context<S, S, E, Unit>.() -> Map<String,*> = context(),
+                        templateInterpolator: String.(Map<String, *>) -> String = Validations.templateInterpolate,
+                        templateResolver: String.(RuleCheckMessageTemplate.Context<S, S, E, Unit>) -> String =
+                                { ctx -> templateInterpolator.invoke(this, contextDataResolver.invoke(ctx)) },
+                        i18nResolver: (String) -> String = Validations.i18nResolver,
+                        messageBuilder: ValkeeRuleMessageBuilder<S, S, E, Unit> = ValkeeRuleMessageBuilder(
+                                validMessage = message.okMessage(),
+                                invalidMessage = message.nokMessage(),
+                                templateResolver = templateResolver,
+                                i18nResolver = i18nResolver
+                        )
     ) = ValkeeRule(
             id = id, name = name,
             property = self(), severity = severity,
             expectation = expectation,
             predicate = { v, e -> return@ValkeeRule predicate(v, e) to Unit },
-            i18nResolver = i18nResolver,
-            validMessage = validMessage,
-            invalidMessage = invalidMessage
+            messageBuilder = messageBuilder
     )
 
-    class MsgTpl<S, V, E, R>(
+    class MsgTpl(
             rule:String = "",
             message:String = "{subject} {property} {value} {verb} {rule} {expectation}",
             okVerb:String = "is",
             nokVerb:String = "should be",
-            private val context: (RuleCheckMessageTemplate.Context<S, V, E, R>) -> Map<String,*> = context(),
             private val okMessage:String = message.interpolate(mapOf("verb" to okVerb, "rule" to rule)),
             private val nokMessage:String = message.interpolate(mapOf("verb" to nokVerb, "rule" to rule))
     ) {
-        fun okMessage() = RuleCheckMessageTemplate(".ok", okMessage, context)
-        fun nokMessage() = RuleCheckMessageTemplate(".nok", nokMessage, context)
+        fun okMessage() = I18nMessage(".ok", okMessage)
+        fun nokMessage() = I18nMessage(".nok", nokMessage)
     }
 
     fun <S> self(): ValkeeProperty<S, S> = ValkeeProperty("self", { it })
@@ -139,6 +150,7 @@ object Validations {
                         "expectation" to display(it.expectation)
                 ).plus(custom.invoke(it))
             }
+
     private fun <T> display(o:T):String {
         return when (o) {
             is String -> "\"$o\""
@@ -148,4 +160,15 @@ object Validations {
     }
 
     var i18nResolver:(String) -> String = { throw UnsupportedOperationException("i18n not implemented by default") }
+    var templateInterpolate:(String,Map<String, *>) -> String = { tpl, context ->
+        // very naive templating mechanism
+        var msg = tpl
+        context.forEach {
+            msg = msg.replace("{${it.key}}", it.value?.toString()?:"")
+        }
+
+        msg.trim()
+    }
+
+    fun String.interpolate(context: Map<String, *>):String = templateInterpolate(this,context)
 }
