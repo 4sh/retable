@@ -1,6 +1,6 @@
 package io.retable
 
-import io.valkee.ValidationSeverity
+import io.valkee.ValkeeSeverity
 import io.valkee.Validations.Numbers.inRange
 import io.valkee.Validations.Strings.length
 import org.junit.jupiter.api.Test
@@ -25,10 +25,10 @@ class RetableValidationTest {
 
         expect(retable.violations.hasHeaderErrors()).isTrue()
         expect(retable.violations.header).hasSize(2)
-        expect(retable.violations.header[0].severity).isEqualTo(ValidationSeverity.ERROR)
+        expect(retable.violations.header[0].severity).isEqualTo(ValkeeSeverity.ERROR)
         expect(retable.violations.header[0].message()).isEqualTo("column [1] header \"first\" should be equal to \"FIRST\"")
 
-        expect(retable.violations.header[1].severity).isEqualTo(ValidationSeverity.ERROR)
+        expect(retable.violations.header[1].severity).isEqualTo(ValkeeSeverity.ERROR)
         expect(retable.violations.header[1].message()).isEqualTo("column [2] header \"second\" should be equal to \"SECOND\"")
 
         // the columns shouldn't be changed by what has been actually found
@@ -54,7 +54,7 @@ class RetableValidationTest {
 
         expect(retable.violations.hasHeaderErrors()).isFalse()
         expect(retable.violations.header).hasSize(2)
-        expect(retable.violations.header[0].severity).isEqualTo(ValidationSeverity.OK)
+        expect(retable.violations.header[0].severity).isEqualTo(ValkeeSeverity.OK)
         expect(retable.violations.header[0].message()).isEqualTo(
                 "column [1] header \"first\" is equal ignoring case to \"FIRST\"")
     }

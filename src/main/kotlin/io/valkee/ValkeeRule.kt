@@ -48,20 +48,20 @@ package io.valkee
  *           predicate = any expectation passes)
  */
 
-enum class ValidationSeverity {
+enum class ValkeeSeverity {
     OK, WARN, ERROR, FATAL
 }
 
-data class ValidationProperty<in S, out V>(
+data class ValkeeProperty<in S, out V>(
         val name:String,
         val accessor: (S) -> V
 )
 
-data class ValidationRule<S, V, E, R>(
+data class ValkeeRule<S, V, E, R>(
         val id:String,
         val name:String,
-        val severity: ValidationSeverity = ValidationSeverity.ERROR,
-        val property: ValidationProperty<S, V>,
+        val severity: ValkeeSeverity = ValkeeSeverity.ERROR,
+        val property: ValkeeProperty<S, V>,
         val expectation: E,
         val predicate: (V, E) -> Pair<Boolean, R>,
         val validMessage: RuleCheckMessageTemplate<S, V, E, R>,
@@ -72,23 +72,23 @@ data class ValidationRule<S, V, E, R>(
         val value = property.accessor(subject)
         val result = predicate(value, expectation)
         return if (result.first) {
-            RuleCheck(this, subject, value, result.second, ValidationSeverity.OK, validMessage)
+            RuleCheck(this, subject, value, result.second, ValkeeSeverity.OK, validMessage)
         } else {
             RuleCheck(this, subject, value, result.second, severity, invalidMessage)
         }
     }
 }
 
-data class RuleCheck<S, V, E, R>(val rule: ValidationRule<S, V, E, R>,
+data class RuleCheck<S, V, E, R>(val rule: ValkeeRule<S, V, E, R>,
                                  val subject:S,
                                  val value:V,
                                  val result:R,
-                                 val severity: ValidationSeverity,
+                                 val severity: ValkeeSeverity,
                                  val messageTemplate: RuleCheckMessageTemplate<S, V, E, R>
 ) {
     fun message() = messageTemplate.buildDefaultMessage(this)
     fun i18nMessage() = messageTemplate.buildI18nMessage(rule.i18nResolver, this)
-    fun isValid() = when (severity) { ValidationSeverity.OK, ValidationSeverity.WARN -> true else -> false }
+    fun isValid() = when (severity) { ValkeeSeverity.OK, ValkeeSeverity.WARN -> true else -> false }
 
     // used to return this check as result for a predicate
     fun toPair(): Pair<Boolean, RuleCheck<S, V, E, R>> = isValid() to this
@@ -111,13 +111,13 @@ data class RuleCheckMessageTemplate<S, V, E, R>(
 
     data class Context<S, V, E, R>(
             val check: RuleCheck<S, V, E, R>,
-            val rule: ValidationRule<S, V, E, R> = check.rule,
+            val rule: ValkeeRule<S, V, E, R> = check.rule,
             val subject: S = check.subject,
             val value:V = check.value,
             val expectation:E = check.rule.expectation,
             val result:R = check.result,
             val valid:Boolean = check.isValid(),
-            val severity: ValidationSeverity = check.severity
+            val severity: ValkeeSeverity = check.severity
     )
 }
 

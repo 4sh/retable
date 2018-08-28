@@ -2,20 +2,20 @@ package io.retable
 
 import io.retable.validation.*
 import io.valkee.RuleCheck
-import io.valkee.ValidationProperty
-import io.valkee.ValidationRule
+import io.valkee.ValkeeProperty
+import io.valkee.ValkeeRule
 import io.valkee.Validations
 import io.valkee.Validations.MsgTpl
 import io.valkee.Validations.rule
 
-typealias HeaderValueConstraint = ValidationRule<String?, String?, String, Unit>
+typealias HeaderValueConstraint = ValkeeRule<String?, String?, String, Unit>
 typealias HeaderValueCheck = RuleCheck<String?, String?, String, Unit>
-typealias HeaderConstraint = ValidationRule<Headers, String?, RetableColumn<*>, HeaderValueCheck>
+typealias HeaderConstraint = ValkeeRule<Headers, String?, RetableColumn<*>, HeaderValueCheck>
 typealias HeaderRuleCheck = RuleCheck<Headers, String?, RetableColumn<*>, HeaderValueCheck>
 
-typealias DataValueConstraint<T, E> = ValidationRule<T, *, E, *>
+typealias DataValueConstraint<T, E> = ValkeeRule<T, *, E, *>
 typealias DataValueCheck<T, E> = RuleCheck<T, *, E, *>
-typealias DataConstraint = ValidationRule<RetableRecord, String?, DataValueConstraint<*, *>, DataValueCheck<*, *>>
+typealias DataConstraint = ValkeeRule<RetableRecord, String?, DataValueConstraint<*, *>, DataValueCheck<*, *>>
 typealias DataConstraintCheck = RuleCheck<RetableRecord, String?, DataValueConstraint<*, *>, DataValueCheck<*, *>>
 
 
@@ -40,7 +40,7 @@ object HeaderConstraints {
     fun constraint(column: RetableColumn<*>, rule: HeaderValueConstraint) =
             rule<Headers, String?, RetableColumn<*>, HeaderValueCheck>(
                     id = "validations.retable.header.${rule.name}",
-                    property = ValidationProperty("[${column.index}] header", { it.get(column) }),
+                    property = ValkeeProperty("[${column.index}] header", { it.get(column) }),
                     expectation = column,
                     predicate = { header, col ->
                         val check = if (header == null) {
@@ -61,7 +61,7 @@ object HeaderConstraints {
 
 object DataConstraints {
     private fun <T> rawColProperty(col:RetableColumn<T>) =
-            ValidationProperty<RetableRecord, String?>(col.name, { it.rawGet(col) })
+            ValkeeProperty<RetableRecord, String?>(col.name, { it.rawGet(col) })
 
     fun rawColConstraint(col:RetableColumn<*>, valueConstraint: DataValueConstraint<String?, *>) =
             rule(

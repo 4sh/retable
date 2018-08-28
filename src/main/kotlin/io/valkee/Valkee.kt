@@ -2,7 +2,7 @@ package io.valkee
 
 
 /**
- * Validations provides a bunch of useful ValidationRule
+ * Validations provides a bunch of useful ValkeeRule
  */
 object Validations {
     object Numbers {
@@ -36,10 +36,10 @@ object Validations {
     }
 
     object Strings {
-        fun <E> length(expected: ValidationRule<Int?, Int?, E, Unit>) = rule(
+        fun <E> length(expected: ValkeeRule<Int?, Int?, E, Unit>) = rule(
                 id = "validations.string.length",
                 expectation = expected,
-                property = ValidationProperty<String?, Int>("length", { it?.length ?: 0 }),
+                property = ValkeeProperty<String?, Int>("length", { it?.length ?: 0 }),
                 message = MsgTpl(message = "{subject} {property} {result}"),
                 predicate = { v, e ->
                     val result = e.validate(v)
@@ -73,15 +73,15 @@ object Validations {
     // helpers
     fun <S, V, E, R> rule(id:String,
                           name:String = id.substringAfterLast('.'),
-                          property: ValidationProperty<S, V>,
-                          severity: ValidationSeverity = ValidationSeverity.ERROR,
+                          property: ValkeeProperty<S, V>,
+                          severity: ValkeeSeverity = ValkeeSeverity.ERROR,
                           expectation: E,
                           predicate: (V, E) -> Pair<Boolean, R>,
                           message: MsgTpl<S, V, E, R> = MsgTpl(name),
                           validMessage: RuleCheckMessageTemplate<S, V, E, R> = message.okMessage(),
                           invalidMessage: RuleCheckMessageTemplate<S, V, E, R> = message.nokMessage(),
                           i18nResolver: (String) -> String = Validations.i18nResolver
-    ): ValidationRule<S, V, E, R> = ValidationRule(
+    ): ValkeeRule<S, V, E, R> = ValkeeRule(
             id = id, name = name,
             property = property, severity = severity,
             expectation = expectation,
@@ -92,18 +92,18 @@ object Validations {
     )
     fun <S, E> selfRule(id:String,
                         name:String = id.substringAfterLast('.'),
-                        severity: ValidationSeverity = ValidationSeverity.ERROR,
+                        severity: ValkeeSeverity = ValkeeSeverity.ERROR,
                         expectation: E,
                         predicate: (S, E) -> Boolean,
                         message: MsgTpl<S, S, E, Unit> = MsgTpl(name),
                         validMessage: RuleCheckMessageTemplate<S, S, E, Unit> = message.okMessage(),
                         invalidMessage: RuleCheckMessageTemplate<S, S, E, Unit> = message.nokMessage(),
                         i18nResolver: (String) -> String = Validations.i18nResolver
-    ) = ValidationRule(
+    ) = ValkeeRule(
             id = id, name = name,
             property = self(), severity = severity,
             expectation = expectation,
-            predicate = { v, e -> return@ValidationRule predicate(v, e) to Unit },
+            predicate = { v, e -> return@ValkeeRule predicate(v, e) to Unit },
             i18nResolver = i18nResolver,
             validMessage = validMessage,
             invalidMessage = invalidMessage
@@ -122,7 +122,7 @@ object Validations {
         fun nokMessage() = RuleCheckMessageTemplate(".nok", nokMessage, context)
     }
 
-    fun <S> self(): ValidationProperty<S, S> = ValidationProperty("self", { it })
+    fun <S> self(): ValkeeProperty<S, S> = ValkeeProperty("self", { it })
 
     fun <S, V, E, R> context(
             custom: RuleCheckMessageTemplate.Context<S, V, E, R>.() -> Map<String,*> = { mapOf<String,Any>() }
