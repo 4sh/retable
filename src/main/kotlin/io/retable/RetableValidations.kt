@@ -1,6 +1,5 @@
 package io.retable
 
-import io.retable.validation.*
 import io.valkee.RuleCheck
 import io.valkee.ValkeeProperty
 import io.valkee.ValkeeRule
