@@ -202,6 +202,10 @@ val retable = Retable.excel(options = ExcelReadOptions(
          )).read(it)
 ```
 
+## Usage (Write)
+
+Support for writing to Excel and CSV files is not implemented yet.
+
 ## Installation
 
 retable has not been released yet
