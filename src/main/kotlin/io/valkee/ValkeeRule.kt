@@ -76,6 +76,8 @@ data class ValkeeRule<S, V, E, R>(
     }
 }
 
+typealias ValkeeComposedRule<S,V, VV, VE, VR> = ValkeeRule<S, V, ValkeeRule<V, VV, VE, VR>, RuleCheck<V, VV, VE, VR>>
+
 data class ValkeeRuleMessageBuilder<S, V, E, R>(
         private val validMessage: I18nMessage,
         private val invalidMessage: I18nMessage,

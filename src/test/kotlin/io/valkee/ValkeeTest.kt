@@ -1,8 +1,7 @@
 package io.valkee
 
-import io.valkee.Validations.Numbers.inRange
-import io.valkee.Validations.Strings.length
 import io.valkee.Validations.Strings.matches
+import io.valkee.rules.*
 import org.junit.jupiter.api.Test
 import strikt.api.Assertion
 import strikt.api.expect
@@ -11,7 +10,7 @@ import strikt.assertions.isEqualTo
 class ValkeeTest {
     @Test
     fun `should validate int range`() {
-        val rule = Validations.Numbers.inRange(IntRange(0, 10))
+        val rule = Valkee<Int>().inRange(0..10)
         expect(rule.validate(2)) {
             rule().isEqualTo(rule)
             value().isEqualTo(2)
@@ -29,7 +28,7 @@ class ValkeeTest {
 
     @Test
     fun `should validate string length`() {
-        val rule = length(inRange(4..10))
+        val rule = Valkee<String>().length { inRange(4..10) }
         expect(rule.validate("test")) {
             rule().isEqualTo(rule)
             subject().isEqualTo("test")

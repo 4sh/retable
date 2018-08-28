@@ -2,7 +2,7 @@ package io.retable
 
 import io.valkee.ValkeeSeverity
 import io.valkee.Validations.Numbers.inRange
-import io.valkee.Validations.Strings.length
+import io.valkee.rules.length
 import org.junit.jupiter.api.Test
 import strikt.api.Assertion
 import strikt.api.expect
@@ -69,9 +69,9 @@ class RetableValidationTest {
         """.trimIndent()
 
         val columns = object : RetableColumns() {
-            val first = string("first", constraint = length(inRange(2..20)))
+            val first = string("first") { length { inRange(2..20) } }
             val second = string("second")
-            val age = int("age", constraint = inRange(0..120))
+            val age = int("age", constraint = { inRange(0..120) })
         }
 
         val retable = Retable.csv(columns = columns)

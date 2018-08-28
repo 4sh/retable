@@ -114,12 +114,17 @@ File(pathTo("invalid_data.csv")).inputStream().use {
             .csv(
                     // we can set constraints on the columns
                     object:RetableColumns() {
-                        val FIRST_NAME = string("first_name",
-                                            constraint = length(inRange(3..20)))
-                        val LAST_NAME  = string("last_name")
+                        // here we set a constraint on the length is in a given range
+                        // the constraint is defined in a block
+                        val FIRST_NAME = string("first_name") { length { inRange(3..20) } }
+                        // different code style, we set the constraint with a named parameter
+                        val LAST_NAME  = string("last_name",
+                                constraint = { matches(Regex("[A-Za-z ]+"),
+                                                "should only contain alpha and spaces")})
                         // an int column will automatically check the value is an int
                         val AGE        = int("age",
-                                constraint = inRange(0..120))
+                                // and we can add other constraint too
+                                constraint =  { inRange(0..120) })
                     })
             .read(it)
 

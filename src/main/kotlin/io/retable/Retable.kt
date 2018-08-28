@@ -1,6 +1,8 @@
 package io.retable
 
 import io.valkee.Validations
+import io.valkee.Valkee
+import io.valkee.ValkeeBuilder
 import java.io.InputStream
 import kotlin.reflect.full.isSubclassOf
 import kotlin.reflect.full.memberProperties
@@ -154,12 +156,12 @@ abstract class RetableColumns {
 
     fun string(name:String,
                headerConstraint: (RetableColumn<String>) ->  HeaderConstraint = HeaderConstraints.eq,
-               constraint: DataValueConstraint<String?, *> = DataConstraints.none()) =
-            StringRetableColumn(c++, name, headerConstraint, constraint)
+               constraint: ValkeeBuilder<String>.() -> DataValueConstraint<String?, *> = { DataConstraints.none() }) =
+            StringRetableColumn(c++, name, headerConstraint, constraint.invoke(Valkee()))
     fun int(name:String,
             headerConstraint: (RetableColumn<Int>) ->  HeaderConstraint = HeaderConstraints.eq,
-            constraint: DataValueConstraint<Int?, *> = DataConstraints.none()) =
-            IntRetableColumn(c++, name, headerConstraint, constraint)
+            constraint: ValkeeBuilder<Int>.() -> DataValueConstraint<Int?, *> = { DataConstraints.none() }) =
+            IntRetableColumn(c++, name, headerConstraint, constraint.invoke(Valkee()))
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
