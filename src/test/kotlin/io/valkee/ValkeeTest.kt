@@ -1,6 +1,5 @@
 package io.valkee
 
-import io.valkee.Validations.Strings.matches
 import io.valkee.rules.*
 import org.junit.jupiter.api.Test
 import strikt.api.Assertion
@@ -48,7 +47,7 @@ class ValkeeTest {
 
     @Test
     fun `should validate string against pattern`() {
-        val rule = matches(Regex("[abc]{3}"), "contain 3 characters among abc")
+        val rule = Valkee<String>().matches(Regex("[abc]{3}"), "contain 3 characters among abc")
         expect(rule.validate("test")) {
             rule().isEqualTo(rule)
             subject().isEqualTo("test")
@@ -64,6 +63,29 @@ class ValkeeTest {
             severity().isEqualTo(ValkeeSeverity.OK)
             message().isEqualTo("\"cab\"  contain 3 characters among abc")
         }
+    }
+
+    @Test
+    fun `should validate object with string and int properties`() {
+        data class User(val name:String,val age:Int)
+
+        val rule = Valkee<User>().constraints {
+            on(User::name) {
+                length { inRange(4..10) }
+            }
+            on(User::age) {
+                inRange(0..120)
+            }
+        }
+
+        val user = User("John", 40)
+        val check = rule.validate(user)
+        expect(check.subject).isEqualTo(user)
+        expect(check.value).isEqualTo(user)
+        expect(check.severity).isEqualTo(ValkeeSeverity.OK)
+
+        expect(rule.validate(User("1", 40)).severity).isEqualTo(ValkeeSeverity.ERROR)
+        expect(rule.validate(User("John", 140)).severity).isEqualTo(ValkeeSeverity.ERROR)
     }
 
 
