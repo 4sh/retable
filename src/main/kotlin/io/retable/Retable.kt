@@ -155,13 +155,16 @@ abstract class RetableColumns {
     operator fun get(index:Int) = list().find { it.index == index } ?: throw ArrayIndexOutOfBoundsException(index)
 
     fun string(name:String,
+               index:Int = c++,
                headerConstraint: (RetableColumn<String>) ->  HeaderConstraint = HeaderConstraints.eq,
-               constraint: ValkeeBuilder<String>.() -> DataValueConstraint<String?, *> = { DataConstraints.none() }) =
-            StringRetableColumn(c++, name, headerConstraint, constraint.invoke(Valkee()))
+               constraint: ValkeeBuilder<String>.() -> DataValueConstraint<String?, *> = { DataConstraints.none() }
+               ) =
+            StringRetableColumn(index, name, headerConstraint, constraint.invoke(Valkee()))
     fun int(name:String,
+            index:Int = c++,
             headerConstraint: (RetableColumn<Int>) ->  HeaderConstraint = HeaderConstraints.eq,
             constraint: ValkeeBuilder<Int>.() -> DataValueConstraint<Int?, *> = { DataConstraints.none() }) =
-            IntRetableColumn(c++, name, headerConstraint, constraint.invoke(Valkee()))
+            IntRetableColumn(index, name, headerConstraint, constraint.invoke(Valkee()))
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

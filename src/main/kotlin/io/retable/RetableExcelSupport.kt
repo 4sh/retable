@@ -3,6 +3,7 @@ package io.retable
 import org.apache.poi.ss.usermodel.*
 import java.io.InputStream
 import java.text.SimpleDateFormat
+import kotlin.math.roundToLong
 
 
 class ExcelReadOptions(
@@ -48,6 +49,10 @@ class RetableExcelSupport<T : RetableColumns>(
                                                 return d
                                             }
                                         }
+                                    else if (this.numericCellValue.isInteger())
+                                        {
+                                            this.numericCellValue.roundToLong().toString()
+                                        }
                                     else
                                         {
                                             this.numericCellValue.toString().replace(Regex("\\.0$"), "")
@@ -57,4 +62,6 @@ class RetableExcelSupport<T : RetableColumns>(
             else                -> this.stringCellValue
         }
     }
+
+    fun Double.isInteger(): Boolean = this.roundToLong().toDouble() == this
 }
