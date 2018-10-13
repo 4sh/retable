@@ -5,7 +5,7 @@ import io.valkee.Validations.Numbers.inRange
 import io.valkee.rules.length
 import org.junit.jupiter.api.Test
 import strikt.api.Assertion
-import strikt.api.expect
+import strikt.api.expectThat
 import strikt.assertions.*
 import java.io.ByteArrayInputStream
 
@@ -23,19 +23,19 @@ class RetableValidationTest {
         val retable = Retable.csv(columns = columns)
                 .read(ByteArrayInputStream(csv.toByteArray(Charsets.UTF_8)))
 
-        expect(retable.violations.hasHeaderErrors()).isTrue()
-        expect(retable.violations.header).hasSize(2)
-        expect(retable.violations.header[0].severity).isEqualTo(ValkeeSeverity.ERROR)
-        expect(retable.violations.header[0].message()).isEqualTo("column [1] header \"first\" should be equal to \"FIRST\"")
+        expectThat(retable.violations.hasHeaderErrors()).isTrue()
+        expectThat(retable.violations.header).hasSize(2)
+        expectThat(retable.violations.header[0].severity).isEqualTo(ValkeeSeverity.ERROR)
+        expectThat(retable.violations.header[0].message()).isEqualTo("column [1] header \"first\" should be equal to \"FIRST\"")
 
-        expect(retable.violations.header[1].severity).isEqualTo(ValkeeSeverity.ERROR)
-        expect(retable.violations.header[1].message()).isEqualTo("column [2] header \"second\" should be equal to \"SECOND\"")
+        expectThat(retable.violations.header[1].severity).isEqualTo(ValkeeSeverity.ERROR)
+        expectThat(retable.violations.header[1].message()).isEqualTo("column [2] header \"second\" should be equal to \"SECOND\"")
 
         // the columns shouldn't be changed by what has been actually found
-        expect(retable.columns.list()).containsExactly(*columns.list().toTypedArray())
+        expectThat(retable.columns.list()).containsExactly(*columns.list().toTypedArray())
 
         // records should have parsed
-        expect(retable.records).containsExactly(
+        expectThat(retable.records).containsExactly(
                 RetableRecord(retable.columns,1, 2, listOf("Joe", "Dalton"))
         )
     }
@@ -52,10 +52,10 @@ class RetableValidationTest {
         val retable = Retable.csv(columns = columns)
                 .read(ByteArrayInputStream(csv.toByteArray(Charsets.UTF_8)))
 
-        expect(retable.violations.hasHeaderErrors()).isFalse()
-        expect(retable.violations.header).hasSize(2)
-        expect(retable.violations.header[0].severity).isEqualTo(ValkeeSeverity.OK)
-        expect(retable.violations.header[0].message()).isEqualTo(
+        expectThat(retable.violations.hasHeaderErrors()).isFalse()
+        expectThat(retable.violations.header).hasSize(2)
+        expectThat(retable.violations.header[0].severity).isEqualTo(ValkeeSeverity.OK)
+        expectThat(retable.violations.header[0].message()).isEqualTo(
                 "column [1] header \"first\" is equal ignoring case to \"FIRST\"")
     }
 
@@ -78,25 +78,25 @@ class RetableValidationTest {
                 .read(ByteArrayInputStream(csv.toByteArray(Charsets.UTF_8)))
 
         // no violations collected before we read the file
-        expect(retable.violations.records.isEmpty())
+        expectThat(retable.violations.records.isEmpty())
 
         // should be able to filter valid records
         val validRecords = retable.records.filter { it.isValid() }.toList()
 
-        expect(validRecords).hasSize(1)
-        expect(validRecords[0][columns.first]).isEqualTo("Xavier")
+        expectThat(validRecords).hasSize(1)
+        expectThat(validRecords[0][columns.first]).isEqualTo("Xavier")
 
-        expect(retable.violations.records).hasSize(2)
-        expect(retable.violations.records[0].violations).hasSize(1)
-        expect(retable.violations.records[0].violations[0].message()).isEqualTo("age \"TWELV\" should be an integer")
+        expectThat(retable.violations.records).hasSize(2)
+        expectThat(retable.violations.records[0].violations).hasSize(1)
+        expectThat(retable.violations.records[0].violations[0].message()).isEqualTo("age \"TWELV\" should be an integer")
 
-        expect(retable.violations.records[1].violations).hasSize(2)
-        expect(retable.violations.records[1].violations[0].message()).isEqualTo("first \"V\" length 1 should be between 2 and 20")
-        expect(retable.violations.records[1].violations[1].message()).isEqualTo("age 124 should be between 0 and 120")
+        expectThat(retable.violations.records[1].violations).hasSize(2)
+        expectThat(retable.violations.records[1].violations[0].message()).isEqualTo("first \"V\" length 1 should be between 2 and 20")
+        expectThat(retable.violations.records[1].violations[1].message()).isEqualTo("age 124 should be between 0 and 120")
     }
 
 
     // helper extensions
     fun <T : Sequence<E>, E> Assertion.Builder<T>.containsExactly(vararg elements: E): Assertion.Builder<List<E>>
-     = this.map { it.toList() }.containsExactly(*elements)
+     = this.get { toList() }.containsExactly(*elements)
 }

@@ -2,7 +2,7 @@ package io.retable
 
 import io.valkee.rules.*
 import org.junit.jupiter.api.Test
-import strikt.api.expect
+import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 import java.io.File
 
@@ -12,7 +12,7 @@ class RetableExamplesTest {
         out.append(a?.toString()?:"null").append("\n")
     }
     private fun expectOut(s: String) {
-        expect(out.toString()).isEqualTo(s.trimIndent() + "\n")
+        expectThat(out.toString()).isEqualTo(s.trimIndent() + "\n")
     }
 
     fun pathTo(s:String) = "src/test/resources/examples/$s"
@@ -85,12 +85,12 @@ class RetableExamplesTest {
         File(pathTo("simple_data.csv")).inputStream().use {
             val retable = Retable
                     .csv(
-                    // we can also define the expected columns
+                    // we can also define the expectThated columns
                     object:RetableColumns() {
                         // each column is defined as a property on an object
                         val FIRST_NAME = string("first_name")
                         val LAST_NAME  = string("last_name")
-                        // note that the column is typed - here the age is expected to be an Int
+                        // note that the column is typed - here the age is expectThated to be an Int
                         val AGE        = int("age")
                     })
                     .read(it)

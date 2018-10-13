@@ -1,9 +1,10 @@
 object Versions {
     val junit = "5.2.0"
-    val strikt = "0.11.2"
+    val strikt = "0.16.0"
     val commonscsv = "1.5"
     val poi = "3.17"
 }
+
 
 plugins {
     kotlin("jvm") version "1.2.61"

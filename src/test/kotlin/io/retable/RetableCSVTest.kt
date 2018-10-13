@@ -2,11 +2,9 @@ package io.retable
 
 import org.junit.jupiter.api.Test
 import strikt.api.Assertion
-import strikt.api.expect
+import strikt.api.expectThat
 import strikt.assertions.containsExactly
-import strikt.assertions.isEqualTo
 import java.io.ByteArrayInputStream
-import java.io.File
 
 class RetableCSVTest {
 
@@ -22,9 +20,9 @@ class RetableCSVTest {
         )).read(ByteArrayInputStream(csv.toByteArray(Charsets.ISO_8859_1)))
 
         val columns = RetableColumns.ofNames(listOf("Prénom", "Nom"))
-        expect(retable.columns.list()).containsExactly(*columns.list().toTypedArray())
+        expectThat(retable.columns.list()).containsExactly(*columns.list().toTypedArray())
 
-        expect(retable.records).containsExactly(
+        expectThat(retable.records).containsExactly(
                 RetableRecord(columns,1, 2, listOf("Ñino", "Dalton"))
         )
     }
@@ -47,7 +45,7 @@ class RetableCSVTest {
                             firstRecordAsHeader = false
         )).read(ByteArrayInputStream(csv.toByteArray(Charsets.UTF_8)))
 
-        expect(retable.records).containsExactly(
+        expectThat(retable.records).containsExactly(
                 RetableRecord(retable.columns,1, 1,
                         listOf("Arthur", "Rimbaud", "Le dormeur du val ; 1870")),
                 RetableRecord(retable.columns,2, 3,
@@ -57,5 +55,5 @@ class RetableCSVTest {
 
     // helper extensions
     fun <T : Sequence<E>, E> Assertion.Builder<T>.containsExactly(vararg elements: E): Assertion.Builder<List<E>>
-     = this.map { it.toList() }.containsExactly(*elements)
+     = this.get { toList() }.containsExactly(*elements)
 }

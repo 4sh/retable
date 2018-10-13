@@ -1,7 +1,7 @@
 package io.retable
 
 import org.junit.jupiter.api.Test
-import strikt.api.expect
+import strikt.api.expectThat
 import strikt.assertions.contains
 import strikt.assertions.containsExactly
 import strikt.assertions.hasSize
@@ -18,9 +18,9 @@ class RetableExcelTest {
         val columns = RetableColumns.ofNames(
                 listOf("First name", "Last Name", "Age", "Date", "Time",
                         "Link", "Math", "Sum", "Money", "Percent", "NumberAsString"))
-        expect(retable.columns.list()).containsExactly(*columns.list().toTypedArray())
+        expectThat(retable.columns.list()).containsExactly(*columns.list().toTypedArray())
 
-        expect(retable.records.toList()).contains(
+        expectThat(retable.records.toList()).contains(
                 RetableRecord(columns,2, 4,
                         listOf("Alfred", "Dalton", "12", "2006-11-06", "12:34:00",
                                 "http://example.com/dalton", "2.5", "14.5", "24", "0.05", "1234567890"))
@@ -41,10 +41,10 @@ class RetableExcelTest {
                 "/many_data.xlsx".resourceStream())
 
         val records = retable.records.toList()
-        expect(records).hasSize(3)
-        expect(records[1][retable.columns.firstName]).isEqualTo("Alfred")
-        expect(records[1][retable.columns.age]).isEqualTo(12)
-        expect(records[1][retable.columns.numberAsString]).isEqualTo("1234567890")
+        expectThat(records).hasSize(3)
+        expectThat(records[1][retable.columns.firstName]).isEqualTo("Alfred")
+        expectThat(records[1][retable.columns.age]).isEqualTo(12)
+        expectThat(records[1][retable.columns.numberAsString]).isEqualTo("1234567890")
     }
 
     @Test
@@ -53,7 +53,7 @@ class RetableExcelTest {
                 "/worksheets.xlsx".resourceStream())
 
         val records = retable.records.toList()
-        expect(records)
+        expectThat(records)
                 .hasSize(2)
                 .contains(
                         RetableRecord(retable.columns,1, 2,
@@ -67,7 +67,7 @@ class RetableExcelTest {
                 "/worksheets.xlsx".resourceStream())
 
         val records = retable.records.toList()
-        expect(records)
+        expectThat(records)
                 .hasSize(2)
                 .contains(
                         RetableRecord(retable.columns,1, 2,
