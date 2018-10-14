@@ -4,6 +4,7 @@ import io.valkee.rules.*
 import org.junit.jupiter.api.Test
 import strikt.api.expectThat
 import strikt.assertions.isEqualTo
+import strikt.assertions.isTrue
 import java.io.File
 
 class RetableExamplesTest {
@@ -85,7 +86,7 @@ class RetableExamplesTest {
         File(pathTo("simple_data.csv")).inputStream().use {
             val retable = Retable
                     .csv(
-                    // we can also define the expectThated columns
+                    // we can also define the expected columns
                     object:RetableColumns() {
                         // each column is defined as a property on an object
                         val FIRST_NAME = string("first_name")
@@ -175,4 +176,124 @@ class RetableExamplesTest {
             ERROR - age "TWELVE" should be an integer
             """)
     }
+
+    @Test
+    fun `should simple export example work`() {
+        Retable(
+                    // we define the column names
+                    RetableColumns.ofNames(listOf("first_name", "last_name", "age"))
+                )
+                .data(
+                    // we provide the data to write as either a list or a sequence
+                    // of List<Any> (the list of values of each row)
+                    listOf(
+                            listOf("John",  "Doe", 23),
+                            listOf("Jenny", "Boe", 25)
+                    )
+                )
+                // then we can just ask to write data to outputstream
+                // in the format we want
+                .write(Retable.excel() to File(pathTo("export_data.xlsx")).outputStream())
+
+            /* produces an excel file like this:
+                +------------+-----------+-----+
+                | first_name | last_name | age |
+                +------------+-----------+-----+
+                | John       | Doe       |  23 |
+                | Jenny      | Boe       |  25 |
+                +------------+-----------+-----+
+             */
+
+        expectThat(File(pathTo("export_data.xlsx"))) {
+            get {exists()}.isTrue()
+        }
+    }
+
+//    @Test
+//    fun `should export columns example work`() {
+//        File(pathTo("export_data.xlsx")).outputStream().use {
+//            Retable
+//                    .excel(
+//                            // we can also define typed columns with arbitrary indexes
+//                            object:RetableColumns() {
+//                                val FIRST_NAME = string("first_name", index = 2)
+//                                val LAST_NAME  = string("last_name", index = 1)
+//                                val AGE        = int("age", index = 3)
+//                            })
+//                    .withData {
+//                        // we provide the data to write as either a list or a sequence
+//                        listOf(
+//                                Person("John", "Doe", 23),
+//                                Person("Jenny", "Boe", 25)
+//                        ).map {
+//                            // of map <column -> value>
+//                            mapOf(
+//                                    // columns are easily accessible in this context
+//                                    // (the `this` is the RetableColumns object defined above)
+//                                    FIRST_NAME to it.firstName,
+//                                    LAST_NAME to it.lastName,
+//                                    AGE to it.age
+//                            )
+//                        }
+//                    }
+//                    // then we can just ask to write data
+//                    .write(it)
+//
+//            /* produces an excel file like this:
+//                +-----------+------------+-----+
+//                | last_name | first_name | age |
+//                +-----------+------------+-----+
+//                | Doe       | John       |  23 |
+//                | Boe       | Jenny      |  25 |
+//                +-----------+------------+-----+
+//             */
+//        }
+//    }
+
+//    @Test
+//    fun `should export after import example work`() {
+//        File(pathTo("simple_data.xlsx")).inputStream().use {
+//            Retable
+//                    .excel(
+//                            object:RetableColumns() {
+//                                val FIRST_NAME = string("first_name")
+//                                val LAST_NAME  = string("last_name")
+//                                val AGE        = int("age")
+//                            })
+//                    .read(it)
+//                    .filter { it[AGE]?:0 > 18 }
+//                    .update { mapOf(AGE to it[AGE] + 5) }
+//                    .write()
+//        }
+//    }
+
+//    @Test
+//    fun `should export after import with data class example work`() {
+//        File(pathTo("simple_data.xlsx")).inputStream().use {
+//            Retable
+//                    .excel(
+//                            object:RetableColumns() {
+//                                val FIRST_NAME = string("first_name")
+//                                val LAST_NAME  = string("last_name")
+//                                val AGE        = int("age")
+//                            })
+//                    .read(it)
+//                    .map { Person(it[FIRST_NAME], it[LAST_NAME], it[AGE]) }
+//                    .filter { it.age > 18 }
+//                    .update { it.copy(age = it.age + 5) }
+//                    .map { mapOf(
+//                            // columns are easily accessible in this context
+//                            // (the `this` is the RetableColumns object defined above)
+//                            FIRST_NAME to it.firstName,
+//                            LAST_NAME to it.lastName,
+//                            AGE to it.age
+//                        )
+//                    }
+//                    .write()
+//        }
+//    }
+
+
 }
+
+data class Person(val firstName:String, val lastName: String, val age:Int)

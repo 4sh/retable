@@ -2,8 +2,13 @@ package io.retable
 
 import org.apache.poi.ss.usermodel.*
 import java.io.InputStream
+import java.io.OutputStream
 import java.text.SimpleDateFormat
 import kotlin.math.roundToLong
+import org.apache.poi.xssf.usermodel.XSSFWorkbook
+import org.apache.poi.ss.formula.functions.T
+import java.time.Instant
+import java.util.*
 
 
 class ExcelReadOptions(
@@ -36,6 +41,34 @@ class RetableExcelSupport<T : RetableColumns>(
                         .toList()
             }
         }
+    }
+
+    override fun write(columns: T, records: Sequence<RetableRecord>, outputStream: OutputStream) {
+        val workbook = XSSFWorkbook()
+        val sheet = workbook.createSheet()
+
+        val header = sheet.createRow(0)
+        columns.list().forEach {
+            val cell = header.createCell(it.index - 1)
+            cell.setCellValue(it.name)
+        }
+
+        records.forEachIndexed { index, record ->
+            val row = sheet.createRow(record.lineNumber.toInt() - 1)
+            columns.list().forEach { col ->
+                record[col]?.let { value ->
+                    val cell = row.createCell(col.index - 1)
+                    when (value) {
+                        is Number -> cell.setCellValue(value.toDouble())
+                        is Instant -> cell.setCellValue(Date(value.toEpochMilli()))
+                        else -> cell.setCellValue(value.toString())
+                    }
+                }
+            }
+        }
+
+        workbook.write(outputStream)
+        workbook.close()
     }
 
     fun Cell.asStringValue():String {

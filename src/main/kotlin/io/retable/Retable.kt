@@ -4,6 +4,7 @@ import io.valkee.Validations
 import io.valkee.Valkee
 import io.valkee.ValkeeBuilder
 import java.io.InputStream
+import java.io.OutputStream
 import kotlin.reflect.full.isSubclassOf
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.jvmErasure
@@ -11,9 +12,30 @@ import kotlin.reflect.jvm.jvmErasure
 
 class Retable<T : RetableColumns>(
         val columns:T,
-        val records:Sequence<RetableRecord>,
-        val violations: RetableViolations
+        val records:Sequence<RetableRecord> = emptySequence(),
+        val violations: RetableViolations = RetableViolations()
 ) {
+    fun data(values: List<List<Any>>): Retable<T> {
+        return Retable(columns = this.columns,
+                records = values.mapIndexed { index,it ->
+                    RetableRecord(this.columns,
+                            index.toLong()+1,
+                            index.toLong()+2, // we suppose we have header on first line
+                            it.map { it.toString() }) }.asSequence())
+    }
+
+    fun <O:ReadOptions> write(pair: Pair<BaseSupport<T, O>, OutputStream>): Retable<T> {
+        val (format,output) = pair
+        output.use {
+            format.write(
+                    this.columns,
+                    this.records,
+                    it
+            )
+        }
+        return this
+    }
+
     companion object {
         fun csv(options:CSVReadOptions = CSVReadOptions()) = csv(RetableColumns.auto, options)
         fun <T : RetableColumns> csv(columns:T, options:CSVReadOptions
@@ -27,6 +49,8 @@ class Retable<T : RetableColumns>(
 
 abstract class BaseSupport<T : RetableColumns, O : ReadOptions>(val columns: RetableColumns, val options:O) {
     abstract fun iterator(input: InputStream): Iterator<List<String>>
+    abstract fun write(columns: T, records: Sequence<RetableRecord>, outputStream: OutputStream)
+
     /**
      * Parses the input
      *
@@ -115,6 +139,7 @@ abstract class BaseSupport<T : RetableColumns, O : ReadOptions>(val columns: Ret
                         },
                 violations)
     }
+
 
 }
 

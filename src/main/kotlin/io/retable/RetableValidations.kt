@@ -20,7 +20,7 @@ typealias DataConstraintCheck = RuleCheck<RetableRecord, String?, DataValueConst
 
 class RetableViolations(
     // list of all header checks performed
-    val header:List<HeaderRuleCheck>,
+    val header:List<HeaderRuleCheck> = listOf(),
     // collect all records having at least one invalid check
     val records:MutableList<RetableRecord> = mutableListOf()) {
 
