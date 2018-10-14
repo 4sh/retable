@@ -282,5 +282,7 @@ Note: Only basic Excel write is supported yet
 
 ## Installation
 
-retable has not been released yet
+retable has not been released yet, but you can use jitpack to obtain it:
+https://jitpack.io/#4sh/retable/-SNAPSHOT
+
 
