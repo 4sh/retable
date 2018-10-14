@@ -209,7 +209,76 @@ val retable = Retable.excel(options = ExcelReadOptions(
 
 ## Usage (Write)
 
-Support for writing to Excel and CSV files is not implemented yet.
+Note: Only basic Excel write is supported yet
+
+### Basic
+
+```kotlin
+        Retable(
+                // we define the column names
+                RetableColumns.ofNames(listOf("first_name", "last_name", "age"))
+            )
+            .data(
+                // we provide the data to write as a list
+                // of List<Any> (the list of values of each row)
+                listOf(
+                        listOf("John",  "Doe", 23),
+                        listOf("Jenny", "Boe", 25)
+                )
+            )
+            // then we can just ask to write data to outputstream
+            // in the format we want
+            .write(Retable.excel() to File(pathTo("export_data.xlsx")).outputStream())
+
+            /* produces an excel file like this:
+                +------------+-----------+-----+
+                | first_name | last_name | age |
+                +------------+-----------+-----+
+                | John       | Doe       |  23 |
+                | Jenny      | Boe       |  25 |
+                +------------+-----------+-----+
+             */
+
+```
+
+### Typed Columns
+
+```kotlin
+// we can also define typed columns with arbitrary indexes (or not)
+        val columns = object:RetableColumns() {
+            val FIRST_NAME = string("first_name", index = 2)
+            val LAST_NAME  = string("last_name", index = 1)
+            val AGE        = int("age", index = 3)
+        }
+        Retable(columns)
+            .data(
+                    // we provide the data to write as a list
+                    // of any kind
+                    listOf(
+                            Person("John", "Doe", 23),
+                            Person("Jenny", "Boe", 25)
+                    )
+            ) {     // with the mapper function to transform them to map <column -> value>
+                    mapOf(
+                            // columns are easily accessible in this context
+                            // (the receiver is the RetableColumns object defined above)
+                            FIRST_NAME to it.firstName,
+                            LAST_NAME to it.lastName,
+                            AGE to it.age
+                    )
+            }
+            // then we can just ask to write data
+            .write(Retable.excel(columns) to File(pathTo("export_data_cols.xlsx")).outputStream())
+
+            /* produces an excel file like this:
+                +-----------+------------+-----+
+                | last_name | first_name | age |
+                +-----------+------------+-----+
+                | Doe       | John       |  23 |
+                | Boe       | Jenny      |  25 |
+                +-----------+------------+-----+
+             */
+```
 
 ## Installation
 

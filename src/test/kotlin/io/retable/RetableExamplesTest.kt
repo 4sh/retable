@@ -180,20 +180,20 @@ class RetableExamplesTest {
     @Test
     fun `should simple export example work`() {
         Retable(
-                    // we define the column names
-                    RetableColumns.ofNames(listOf("first_name", "last_name", "age"))
+                // we define the column names
+                RetableColumns.ofNames(listOf("first_name", "last_name", "age"))
+            )
+            .data(
+                // we provide the data to write as either a list or a sequence
+                // of List<Any> (the list of values of each row)
+                listOf(
+                        listOf("John",  "Doe", 23),
+                        listOf("Jenny", "Boe", 25)
                 )
-                .data(
-                    // we provide the data to write as either a list or a sequence
-                    // of List<Any> (the list of values of each row)
-                    listOf(
-                            listOf("John",  "Doe", 23),
-                            listOf("Jenny", "Boe", 25)
-                    )
-                )
-                // then we can just ask to write data to outputstream
-                // in the format we want
-                .write(Retable.excel() to File(pathTo("export_data.xlsx")).outputStream())
+            )
+            // then we can just ask to write data to outputstream
+            // in the format we want
+            .write(Retable.excel() to File(pathTo("export_data.xlsx")).outputStream())
 
             /* produces an excel file like this:
                 +------------+-----------+-----+
