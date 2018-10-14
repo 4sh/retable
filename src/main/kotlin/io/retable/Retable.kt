@@ -23,6 +23,18 @@ class Retable<T : RetableColumns>(
                             index.toLong()+2, // we suppose we have header on first line
                             it.map { it.toString() }) }.asSequence())
     }
+    fun <V> data(values: List<V>, mapper:T.(it:V) -> Map<RetableColumn<out Any>,Any>): Retable<T> {
+        return Retable(columns = this.columns,
+                records = values.mapIndexed { rowIndex,value ->
+                    val m = mapper.invoke(this.columns, value)
+                    RetableRecord(this.columns,
+                            rowIndex.toLong()+1,
+                            rowIndex.toLong()+2, // we suppose we have header on first line
+                            (1..this.columns.maxIndex).map { colIndex ->
+                                this.columns.list().find { it.index == colIndex }
+                                        ?.let { m[it] }?.toString()?:"" }
+                    ) }.asSequence())
+    }
 
     fun <O:ReadOptions> write(pair: Pair<BaseSupport<T, O>, OutputStream>): Retable<T> {
         val (format,output) = pair
@@ -190,6 +202,8 @@ abstract class RetableColumns {
             headerConstraint: (RetableColumn<Int>) ->  HeaderConstraint = HeaderConstraints.eq,
             constraint: ValkeeBuilder<Int>.() -> DataValueConstraint<Int?, *> = { DataConstraints.none() }) =
             IntRetableColumn(index, name, headerConstraint, constraint.invoke(Valkee()))
+
+    val maxIndex:Int get() = list().map { it.index }.max()?:0
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

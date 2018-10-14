@@ -209,46 +209,43 @@ class RetableExamplesTest {
         }
     }
 
-//    @Test
-//    fun `should export columns example work`() {
-//        File(pathTo("export_data.xlsx")).outputStream().use {
-//            Retable
-//                    .excel(
-//                            // we can also define typed columns with arbitrary indexes
-//                            object:RetableColumns() {
-//                                val FIRST_NAME = string("first_name", index = 2)
-//                                val LAST_NAME  = string("last_name", index = 1)
-//                                val AGE        = int("age", index = 3)
-//                            })
-//                    .withData {
-//                        // we provide the data to write as either a list or a sequence
-//                        listOf(
-//                                Person("John", "Doe", 23),
-//                                Person("Jenny", "Boe", 25)
-//                        ).map {
-//                            // of map <column -> value>
-//                            mapOf(
-//                                    // columns are easily accessible in this context
-//                                    // (the `this` is the RetableColumns object defined above)
-//                                    FIRST_NAME to it.firstName,
-//                                    LAST_NAME to it.lastName,
-//                                    AGE to it.age
-//                            )
-//                        }
-//                    }
-//                    // then we can just ask to write data
-//                    .write(it)
-//
-//            /* produces an excel file like this:
-//                +-----------+------------+-----+
-//                | last_name | first_name | age |
-//                +-----------+------------+-----+
-//                | Doe       | John       |  23 |
-//                | Boe       | Jenny      |  25 |
-//                +-----------+------------+-----+
-//             */
-//        }
-//    }
+    @Test
+    fun `should export columns example work`() {
+        // we can also define typed columns with arbitrary indexes (or not)
+        val columns = object:RetableColumns() {
+            val FIRST_NAME = string("first_name", index = 2)
+            val LAST_NAME  = string("last_name", index = 1)
+            val AGE        = int("age", index = 3)
+        }
+        Retable(columns)
+            .data(
+                    // we provide the data to write as either a list or a sequence
+                    // of any kind
+                    listOf(
+                            Person("John", "Doe", 23),
+                            Person("Jenny", "Boe", 25)
+                    )
+            ) {     // with the mapper function to transform then to map <column -> value>
+                    mapOf(
+                            // columns are easily accessible in this context
+                            // (the receiver is the RetableColumns object defined above)
+                            FIRST_NAME to it.firstName,
+                            LAST_NAME to it.lastName,
+                            AGE to it.age
+                    )
+            }
+            // then we can just ask to write data
+            .write(Retable.excel(columns) to File(pathTo("export_data_cols.xlsx")).outputStream())
+
+            /* produces an excel file like this:
+                +-----------+------------+-----+
+                | last_name | first_name | age |
+                +-----------+------------+-----+
+                | Doe       | John       |  23 |
+                | Boe       | Jenny      |  25 |
+                +-----------+------------+-----+
+             */
+    }
 
 //    @Test
 //    fun `should export after import example work`() {
