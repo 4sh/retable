@@ -285,7 +285,7 @@ data class RetableRecord(val columns: RetableColumns,
     operator fun get(c:String):String? {
         return columns.list()
                 .find { it.name == c }
-                ?.let { rawData.get(it.index - 1) }
+                ?.let { rawGet(it) }
     }
 
     operator fun <T> get(c:RetableColumn<T>):T? = rawGet(c)?.let { c.getFromRaw(it) }

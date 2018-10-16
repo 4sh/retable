@@ -5,6 +5,7 @@ import strikt.api.Assertion
 import strikt.api.expectThat
 import strikt.assertions.containsExactly
 import strikt.assertions.isEqualTo
+import strikt.assertions.isNull
 import java.io.ByteArrayInputStream
 
 class RetableTest {
@@ -28,6 +29,16 @@ class RetableTest {
         expectThat(RetableRecord(columns,1, 2, listOf("Xavier", "Hanin"))) {
             get {this["first_name"] }.isEqualTo("Xavier")
             get {this["last_name"] }.isEqualTo("Hanin")
+        }
+    }
+
+    @Test
+    fun `should allow missing values in a row`() {
+        val columns = RetableColumns.ofNames(listOf("first_name", "last_name"))
+
+        expectThat(RetableRecord(columns,1, 2, listOf("Xavier"))) {
+            get {this["last_name"] }.isNull()
+            get {this.rawGet(columns[2]) }.isNull()
         }
     }
 
