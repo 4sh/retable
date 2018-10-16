@@ -290,7 +290,7 @@ data class RetableRecord(val columns: RetableColumns,
 
     operator fun <T> get(c:RetableColumn<T>):T? = rawGet(c)?.let { c.getFromRaw(it) }
 
-    fun <T> rawGet(c:RetableColumn<T>):String? = rawData.get(c.index - 1)
+    fun <T> rawGet(c:RetableColumn<T>):String? = if (rawData.size >= c.index) rawData.get(c.index - 1) else null
 
     fun isValid(): Boolean {
         return violations.isEmpty()
