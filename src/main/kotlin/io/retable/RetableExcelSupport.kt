@@ -35,10 +35,14 @@ class RetableExcelSupport<T : RetableColumns>(
             }
 
             override fun next(): List<String> {
-                return rowIterator.next().cellIterator().asSequence()
-                        .map { it.asStringValue() }
+                val row = rowIterator.next()
+                val upperRange = if (columns.maxIndex == 0) row.lastCellNum.toInt() else columns.maxIndex-1
+                return (0..upperRange)
+                        .map { row.getCell(it) }
+                        .map { it?.asStringValue()?:"" }
                         .map { if (options.trimValues) { it.trim() } else { it }}
                         .toList()
+                        .removeLastEmpty()
             }
         }
     }
@@ -97,4 +101,14 @@ class RetableExcelSupport<T : RetableColumns>(
     }
 
     fun Double.isInteger(): Boolean = this.roundToLong().toDouble() == this
+
+    private fun <E> List<E>.removeLastEmpty(): List<E> {
+        // excel returns all cells which are not empty, it only depends on which cells have been created
+        // at one point in time - even if clearer after. This behaviour can't be understood by end user who only see
+        // empty cells - therefore we remove trailing empty cells in the list of rawData, and when accessing cells
+        // exceeding index is handled anyway
+        return this.subList(0, this.size - kotlin.math.max(0,
+                this.reversed().indexOfFirst { !it?.toString().isNullOrBlank() }))
+    }
 }
+

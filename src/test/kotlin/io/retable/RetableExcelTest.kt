@@ -48,11 +48,34 @@ class RetableExcelTest {
     }
 
     @Test
+    fun `should read xlsx with empty cells`() {
+        val retable = Retable.excel(
+                object : RetableColumns() {
+                    val firstName = string("First name")
+                    val lastName = string("Last Name")
+                    val age = int("Age")
+                    val date = string("Date")
+                    val numberAsString = string("NumberAsString", index = 11)
+                }
+        ).read(
+                "/empty_cells.xlsx".resourceStream())
+
+        val records = retable.records.toList()
+        expectThat(records).hasSize(3)
+        expectThat(records[1][retable.columns.firstName]).isEqualTo("Alfred")
+        expectThat(records[1][retable.columns.age]).isEqualTo(12)
+        expectThat(records[1][retable.columns.numberAsString]).isEqualTo("1234567890")
+
+        expectThat(records[2][retable.columns.lastName]).isEqualTo("Hugo")
+    }
+
+    @Test
     fun `should read xlsx on selected sheet by index`() {
         val retable = Retable.excel(options = ExcelReadOptions(sheetIndex = 2)).read(
                 "/worksheets.xlsx".resourceStream())
 
         val records = retable.records.toList()
+        println(records)
         expectThat(records)
                 .hasSize(2)
                 .contains(
