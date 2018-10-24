@@ -269,6 +269,12 @@ class IntRetableColumn(index:Int, name:String,
     override fun getFromRaw(raw: String): Int = raw.toInt()
 }
 
+/**
+ * Gives a column index using Excel like notation. eg A for 1, D for 4, AA for 27, ...
+ */
+fun col(c:String):Int {
+    return c.toUpperCase().chars().map { (it - 'A'.toInt()) + 1 }.reduce { index, v -> index * 26 + v }.orElse(0)
+}
 
 
 

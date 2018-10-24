@@ -30,6 +30,7 @@ dependencies {
 
     testCompile("io.strikt:strikt-core:${Versions.strikt}")
     testImplementation("org.junit.jupiter:junit-jupiter-api:${Versions.junit}")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:${Versions.junit}")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:${Versions.junit}")
 }
 

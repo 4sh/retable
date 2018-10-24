@@ -1,6 +1,8 @@
 package io.retable
 
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import strikt.api.Assertion
 import strikt.api.expectThat
 import strikt.assertions.containsExactly
@@ -135,6 +137,20 @@ class RetableTest {
                 RetableRecord(columns,2, 3, listOf("Alfred", "Dalton")),
                 RetableRecord(columns,3, 4, listOf("Victor", "Hugo"))
         )
+    }
+
+    @ParameterizedTest(name = "\"{0}\" should be {1}")
+    @CsvSource(
+        "A,   1",
+        "B,   2 ",
+        "j,   10",
+        "Z,   26",
+        "AA,  27",
+        "AZ,  52",
+        "BA,  53"
+    )
+    fun `should convert column indexes`(c:String, index:Int) {
+        expectThat(col(c)).isEqualTo(index)
     }
 
     // helper extensions
