@@ -62,6 +62,9 @@ class RetableExcelSupport<T : RetableColumns>(
             columns.list().forEach { col ->
                 record[col]?.let { value ->
                     val cell = row.createCell(col.index - 1)
+                    val style = workbook.createCellStyle()
+                    style.wrapText = true
+                    cell.cellStyle = style
                     when (value) {
                         is Number -> cell.setCellValue(value.toDouble())
                         is Instant -> cell.setCellValue(Date(value.toEpochMilli()))
@@ -71,6 +74,9 @@ class RetableExcelSupport<T : RetableColumns>(
             }
         }
 
+        for (index in 0..columns.maxIndex - 1) {
+            sheet.autoSizeColumn(index)
+        }
         workbook.write(outputStream)
         workbook.close()
     }
