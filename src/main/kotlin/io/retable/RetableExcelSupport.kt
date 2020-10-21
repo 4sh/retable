@@ -1,14 +1,19 @@
 package io.retable
 
-import org.apache.poi.ss.usermodel.*
+import org.apache.poi.ss.usermodel.Cell
+import org.apache.poi.ss.usermodel.CellType
+import org.apache.poi.ss.usermodel.DateUtil
+import org.apache.poi.ss.usermodel.WorkbookFactory
+import org.apache.poi.xssf.usermodel.XSSFCell
+import org.apache.poi.xssf.usermodel.XSSFCellStyle
+import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import java.io.InputStream
 import java.io.OutputStream
 import java.text.SimpleDateFormat
-import kotlin.math.roundToLong
-import org.apache.poi.xssf.usermodel.XSSFWorkbook
-import org.apache.poi.ss.formula.functions.T
 import java.time.Instant
+import java.time.LocalDate
 import java.util.*
+import kotlin.math.roundToLong
 
 
 class ExcelReadOptions(
@@ -67,6 +72,7 @@ class RetableExcelSupport<T : RetableColumns>(
                     cell.cellStyle = style
                     when (value) {
                         is Number -> cell.setCellValue(value.toDouble())
+                        is LocalDate -> writeLocalDateCell(workbook, cell, style, value)
                         is Instant -> cell.setCellValue(Date(value.toEpochMilli()))
                         else -> cell.setCellValue(value.toString())
                     }
@@ -79,6 +85,15 @@ class RetableExcelSupport<T : RetableColumns>(
         }
         workbook.write(outputStream)
         workbook.close()
+    }
+
+    private fun writeLocalDateCell(workbook: XSSFWorkbook, cell: XSSFCell, style: XSSFCellStyle, value: LocalDate) {
+        style.dataFormat = workbook.creationHelper.createDataFormat().getFormat("m/d/yy")
+        cell.cellStyle = style
+        val calendar = Calendar.getInstance()
+        calendar.set(value.year, value.month.value, value.dayOfMonth, 0, 0, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        cell.setCellValue(DateUtil.getExcelDate(calendar, false))
     }
 
     fun Cell.asStringValue():String {

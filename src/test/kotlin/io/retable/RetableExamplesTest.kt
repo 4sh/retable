@@ -6,6 +6,7 @@ import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 import strikt.assertions.isTrue
 import java.io.File
+import java.time.LocalDate
 
 class RetableExamplesTest {
     val out = StringBuilder()
@@ -247,6 +248,50 @@ class RetableExamplesTest {
              */
     }
 
+    @Test
+    fun `should export columns with local date example work`() {
+        // we can also define typed columns with arbitrary indexes (or not)
+        val columns = object:RetableColumns() {
+            val NAME = string("name")
+            val START_DATE   = localDate("start_date")
+            val END_DATE   = localDate("end_date")
+        }
+        Retable(columns)
+            .data(
+                    // we provide the data to write as either a list or a sequence
+                    // of any kind
+                    listOf(
+                            Event("So Good Fest",
+                                    LocalDate.parse("2020-06-05"),
+                                    LocalDate.parse("2020-06-06")
+                            ),
+                            Event("Les Fous-Cavés",
+                                    LocalDate.parse("2019-07-19"),
+                                    LocalDate.parse("2020-07-21")
+                            )
+                    )
+            ) {     // with the mapper function to transform then to map <column -> value>
+                    mapOf(
+                            // columns are easily accessible in this context
+                            // (the receiver is the RetableColumns object defined above)
+                            NAME to it.name,
+                            START_DATE to it.startDate,
+                            END_DATE to it.endDate
+                    )
+            }
+            // then we can just ask to write data
+            .write(Retable.excel(columns) to File(pathTo("export_data_cols_date.xlsx")).outputStream())
+
+            /* produces an excel file like this:
+                +----------------+------------+------------+
+                | name           | start_date | end_date   |
+                +----------------+------------+------------+
+                | So Good Fest   | 05/07/2020 | 06/07/2020 |
+                | Les Fous-Cavés | 19/08/2019 | 21/08/2020 |
+                +----------------+------------+------------+
+             */
+    }
+
 //    @Test
 //    fun `should export after import example work`() {
 //        File(pathTo("simple_data.xlsx")).inputStream().use {
@@ -294,3 +339,5 @@ class RetableExamplesTest {
 }
 
 data class Person(val firstName:String, val lastName: String, val age:Int)
+
+data class Event(val name: String, val startDate: LocalDate, val endDate: LocalDate)

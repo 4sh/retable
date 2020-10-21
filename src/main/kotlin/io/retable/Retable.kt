@@ -5,6 +5,7 @@ import io.valkee.Valkee
 import io.valkee.ValkeeBuilder
 import java.io.InputStream
 import java.io.OutputStream
+import java.time.LocalDate
 import kotlin.reflect.full.isSubclassOf
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.jvmErasure
@@ -203,6 +204,12 @@ abstract class RetableColumns {
             constraint: ValkeeBuilder<Int>.() -> DataValueConstraint<Int?, *> = { DataConstraints.none() }) =
             IntRetableColumn(index, name, headerConstraint, constraint.invoke(Valkee()))
 
+    fun localDate(name:String,
+                  index:Int = c++,
+                  headerConstraint: (RetableColumn<LocalDate>) ->  HeaderConstraint = HeaderConstraints.eq,
+                  constraint: ValkeeBuilder<LocalDate>.() -> DataValueConstraint<LocalDate?, *> = { DataConstraints.none() }) =
+            LocalDateRetableColumn(index, name, headerConstraint, constraint.invoke(Valkee()))
+
     val maxIndex:Int get() = list().map { it.index }.max()?:0
 
     override fun equals(other: Any?): Boolean {
@@ -267,6 +274,14 @@ class IntRetableColumn(index:Int, name:String,
     : RetableColumn<Int>(index, name, headerConstraint, Validations.Strings.isInteger(), constraint) {
 
     override fun getFromRaw(raw: String): Int = raw.toInt()
+}
+
+class LocalDateRetableColumn(index: Int, name: String,
+                             headerConstraint: (RetableColumn<LocalDate>) -> HeaderConstraint,
+                             constraint: DataValueConstraint<LocalDate?, *>)
+    : RetableColumn<LocalDate>(index, name, headerConstraint, Validations.Strings.isInteger(), constraint) {
+
+    override fun getFromRaw(raw: String): LocalDate = LocalDate.parse(raw)
 }
 
 /**
