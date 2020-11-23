@@ -198,6 +198,7 @@ abstract class RetableColumns {
                constraint: ValkeeBuilder<String>.() -> DataValueConstraint<String?, *> = { DataConstraints.none() }
                ) =
             StringRetableColumn(index, name, headerConstraint, constraint.invoke(Valkee()))
+
     fun int(name:String,
             index:Int = c++,
             headerConstraint: (RetableColumn<Int>) ->  HeaderConstraint = HeaderConstraints.eq,
@@ -209,6 +210,14 @@ abstract class RetableColumns {
                   headerConstraint: (RetableColumn<LocalDate>) ->  HeaderConstraint = HeaderConstraints.eq,
                   constraint: ValkeeBuilder<LocalDate>.() -> DataValueConstraint<LocalDate?, *> = { DataConstraints.none() }) =
             LocalDateRetableColumn(index, name, headerConstraint, constraint.invoke(Valkee()))
+
+
+    fun double(name: String,
+              index: Int = c++,
+              headerConstraint: (RetableColumn<Double>) -> HeaderConstraint = HeaderConstraints.eq,
+              constraint: ValkeeBuilder<Double>.() -> DataValueConstraint<Double?, *> = { DataConstraints.none() }) =
+            DoubleRetableColumn(index, name, headerConstraint, constraint.invoke(Valkee()))
+
 
     val maxIndex:Int get() = list().map { it.index }.max()?:0
 
@@ -283,7 +292,15 @@ class LocalDateRetableColumn(index: Int, name: String,
 
     override fun getFromRaw(raw: String): LocalDate = LocalDate.parse(raw)
 }
+class DoubleRetableColumn(index: Int, name: String,
+                          headerConstraint: (RetableColumn<Double>) -> HeaderConstraint,
+                          constraint: DataValueConstraint<Double?, *>)
+    : RetableColumn<Double>(index, name, headerConstraint, Validations.Strings.isDouble(), constraint) {
 
+    override fun getFromRaw(raw: String): Double {
+        return raw.toDouble()
+    }
+}
 /**
  * Gives a column index using Excel like notation. eg A for 1, D for 4, AA for 27, ...
  */

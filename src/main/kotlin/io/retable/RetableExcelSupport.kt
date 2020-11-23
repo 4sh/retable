@@ -71,7 +71,10 @@ class RetableExcelSupport<T : RetableColumns>(
                     style.wrapText = true
                     cell.cellStyle = style
                     when (value) {
-                        is Number -> cell.setCellValue(value.toDouble())
+                        is Number -> {
+                            cell.setCellType(CellType.NUMERIC)
+                            cell.setCellValue(value.toDouble())
+                        }
                         is LocalDate -> writeLocalDateCell(workbook, cell, style, value)
                         is Instant -> cell.setCellValue(Date(value.toEpochMilli()))
                         else -> cell.setCellValue(value.toString())

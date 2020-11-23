@@ -35,7 +35,7 @@ class RetableViolations(
 object HeaderConstraints {
     val missingHeaderRule = Validations.selfRule<String?, String>(
             id = "validations.header.missing",
-            expectation = "not null", predicate = { v,e -> v != null })
+            expectation = "not null", predicate = { v, e -> v != null })
     fun constraint(column: RetableColumn<*>, rule: HeaderValueConstraint) =
             rule<Headers, String?, RetableColumn<*>, HeaderValueCheck>(
                     id = "validations.retable.header.${rule.name}",
