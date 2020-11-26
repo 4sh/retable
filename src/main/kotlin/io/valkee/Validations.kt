@@ -60,6 +60,11 @@ object Validations {
         { v, e -> v?.asSequence()?.filter { !it.isDigit() }?.firstOrNull() == null },
                 message = MsgTpl("an integer")
         )
+        fun isDouble() = selfRule<String?, Unit>(
+                id = "validations.string.isInteger", expectation = Unit, predicate =
+        { v, e -> v?.matches("-?\\d+(\\.\\d+)?".toRegex()) == true },
+                message = MsgTpl("a double")
+        )
         fun matches(regex:Regex, message:String = "match {expectation}") = selfRule<String?, Regex>(
                 id = "validations.string.equals", expectation = regex,
                 predicate = { v, e -> v?.let { e.matches(it) } ?: false },

@@ -6,6 +6,7 @@ import strikt.assertions.contains
 import strikt.assertions.containsExactly
 import strikt.assertions.hasSize
 import strikt.assertions.isEqualTo
+import java.time.LocalDate
 
 class RetableExcelTest {
 
@@ -34,7 +35,7 @@ class RetableExcelTest {
                     val firstName = string("First name")
                     val lastName = string("Last Name")
                     val age = int("Age")
-                    val date = string("Date")
+                    val date = localDate("Date")
                     val numberAsString = string("NumberAsString", index = 11)
                 }
         ).read(
@@ -43,6 +44,7 @@ class RetableExcelTest {
         val records = retable.records.toList()
         expectThat(records).hasSize(3)
         expectThat(records[1][retable.columns.firstName]).isEqualTo("Alfred")
+        expectThat(records[1][retable.columns.date]).isEqualTo(LocalDate.parse("2006-11-06"))
         expectThat(records[1][retable.columns.age]).isEqualTo(12)
         expectThat(records[1][retable.columns.numberAsString]).isEqualTo("1234567890")
     }
@@ -54,7 +56,7 @@ class RetableExcelTest {
                     val firstName = string("First name")
                     val lastName = string("Last Name")
                     val age = int("Age")
-                    val date = string("Date")
+                    val date = localDate("Date")
                     val numberAsString = string("NumberAsString", index = 11)
                 }
         ).read(
