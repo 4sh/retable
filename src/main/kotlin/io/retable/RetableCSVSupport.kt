@@ -1,9 +1,11 @@
 package io.retable
 
 import org.apache.commons.csv.CSVFormat
+import org.apache.commons.csv.CSVPrinter
 import java.io.InputStream
 import java.io.InputStreamReader
 import java.io.OutputStream
+import java.io.OutputStreamWriter
 import java.nio.charset.Charset
 
 class CSVReadOptions(
@@ -47,6 +49,18 @@ class RetableCSVSupport<T : RetableColumns>(
     }
 
     override fun write(columns: T, records: Sequence<RetableRecord>, outputStream: OutputStream) {
-        TODO("not implemented")
+        val sortedColumns = columns.list()
+                .sortedBy { it.index }
+        val csvPrinter = CSVPrinter(OutputStreamWriter(outputStream), CSVFormat.DEFAULT
+                .withHeader(*sortedColumns
+                        .map { it.name }
+                        .toTypedArray()))
+
+        records.forEach { record ->
+            csvPrinter.printRecord(record.rawData)
+        }
+
+        csvPrinter.flush()
+        csvPrinter.close()
     }
 }
