@@ -17,22 +17,22 @@ import kotlin.math.roundToLong
 
 
 class ExcelReadOptions(
-        val sheetName:String? = null, // sheet name (used in priority over sheet index, if provided)
-        val sheetIndex:Int? = null, // sheet index (one based)
-        trimValues:Boolean = true,
-        ignoreEmptyLines:Boolean = true,
-        firstRecordAsHeader:Boolean = true)
+        val sheetName: String? = null, // sheet name (used in priority over sheet index, if provided)
+        val sheetIndex: Int? = null, // sheet index (one based)
+        trimValues: Boolean = true,
+        ignoreEmptyLines: Boolean = true,
+        firstRecordAsHeader: Boolean = true)
     : ReadOptions(trimValues, ignoreEmptyLines, firstRecordAsHeader)
 
 class RetableExcelSupport<T : RetableColumns>(
-        columns: T, options:ExcelReadOptions = ExcelReadOptions())
+        columns: T, options: ExcelReadOptions = ExcelReadOptions())
     : BaseSupport<T, ExcelReadOptions>(columns, options) {
     override fun iterator(input: InputStream): Iterator<List<String>> {
         val workbook = WorkbookFactory.create(input)
         val sheet = if (options.sheetName != null) workbook.getSheet(options.sheetName)
-                        else workbook.getSheetAt((options.sheetIndex?:1) - 1)
-        val rowIterator = sheet?.rowIterator()?:
-                throw IllegalStateException("worksheet `${options.sheetName?:options.sheetIndex?:1}` not found")
+        else workbook.getSheetAt((options.sheetIndex ?: 1) - 1)
+        val rowIterator = sheet?.rowIterator()
+                ?: throw IllegalStateException("worksheet `${options.sheetName ?: options.sheetIndex ?: 1}` not found")
 
         return object : Iterator<List<String>> {
             override fun hasNext(): Boolean {
@@ -41,11 +41,17 @@ class RetableExcelSupport<T : RetableColumns>(
 
             override fun next(): List<String> {
                 val row = rowIterator.next()
-                val upperRange = if (columns.maxIndex == 0) row.lastCellNum.toInt() else columns.maxIndex-1
+                val upperRange = if (columns.maxIndex == 0) row.lastCellNum.toInt() else columns.maxIndex - 1
                 return (0..upperRange)
                         .map { row.getCell(it) }
-                        .map { it?.asStringValue()?:"" }
-                        .map { if (options.trimValues) { it.trim() } else { it }}
+                        .map { it?.asStringValue() ?: "" }
+                        .map {
+                            if (options.trimValues) {
+                                it.trim()
+                            } else {
+                                it
+                            }
+                        }
                         .toList()
                         .removeLastEmpty()
             }
@@ -61,23 +67,27 @@ class RetableExcelSupport<T : RetableColumns>(
             val cell = header.createCell(it.index - 1)
             cell.setCellValue(it.name)
         }
+        val styleText = workbook.createCellStyle()
+        styleText.wrapText = true
+        val styleDate = workbook.createCellStyle()
+        styleDate.dataFormat = workbook.creationHelper.createDataFormat().getFormat("m/d/yy")
 
         records.forEachIndexed { index, record ->
             val row = sheet.createRow(record.lineNumber.toInt() - 1)
             columns.list().forEach { col ->
                 record[col]?.let { value ->
                     val cell = row.createCell(col.index - 1)
-                    val style = workbook.createCellStyle()
-                    style.wrapText = true
-                    cell.cellStyle = style
                     when (value) {
                         is Number -> {
                             cell.setCellType(CellType.NUMERIC)
                             cell.setCellValue(value.toDouble())
                         }
-                        is LocalDate -> writeLocalDateCell(workbook, cell, style, value)
+                        is LocalDate -> writeLocalDateCell(workbook, cell, styleDate, value)
                         is Instant -> cell.setCellValue(Date(value.toEpochMilli()))
-                        else -> cell.setCellValue(value.toString())
+                        else -> {
+                            cell.setCellValue(value.toString())
+                            cell.cellStyle = styleText
+                        }
                     }
                 }
             }
@@ -91,7 +101,6 @@ class RetableExcelSupport<T : RetableColumns>(
     }
 
     private fun writeLocalDateCell(workbook: XSSFWorkbook, cell: XSSFCell, style: XSSFCellStyle, value: LocalDate) {
-        style.dataFormat = workbook.creationHelper.createDataFormat().getFormat("m/d/yy")
         cell.cellStyle = style
         val calendar = Calendar.getInstance()
         calendar.set(value.year, value.month.value, value.dayOfMonth, 0, 0, 0)
@@ -99,28 +108,27 @@ class RetableExcelSupport<T : RetableColumns>(
         cell.setCellValue(DateUtil.getExcelDate(calendar, false))
     }
 
-    fun Cell.asStringValue():String {
+    fun Cell.asStringValue(): String {
         return when (this.cellTypeEnum) {
-            CellType.NUMERIC    ->  if (DateUtil.isCellDateFormatted(this))
-                                        {
-                                            val  d = SimpleDateFormat("yyyy-MM-dd").format(this.dateCellValue)
-                                            if (d == "1899-12-31") {
-                                                return SimpleDateFormat("HH:mm:SS").format(this.dateCellValue)
-                                            } else {
-                                                return d
-                                            }
-                                        }
-                                    else if (this.numericCellValue.isInteger())
-                                        {
-                                            this.numericCellValue.roundToLong().toString()
-                                        }
-                                    else
-                                        {
-                                            this.numericCellValue.toString().replace(Regex("\\.0$"), "")
-                                        }
+            CellType.NUMERIC -> if (DateUtil.isCellDateFormatted(this)) {
+                val d = SimpleDateFormat("yyyy-MM-dd").format(this.dateCellValue)
+                if (d == "1899-12-31") {
+                    return SimpleDateFormat("HH:mm:SS").format(this.dateCellValue)
+                } else {
+                    return d
+                }
+            } else if (this.numericCellValue.isInteger()) {
+                this.numericCellValue.roundToLong().toString()
+            } else {
+                this.numericCellValue.toString().replace(Regex("\\.0$"), "")
+            }
 
-            CellType.FORMULA    -> try { this.numericCellValue.toString() } catch (e:Exception) { this.stringCellValue }
-            else                -> this.stringCellValue
+            CellType.FORMULA -> try {
+                this.numericCellValue.toString()
+            } catch (e: Exception) {
+                this.stringCellValue
+            }
+            else -> this.stringCellValue
         }
     }
 
