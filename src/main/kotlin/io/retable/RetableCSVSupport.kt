@@ -51,7 +51,7 @@ class RetableCSVSupport<T : RetableColumns>(
     override fun write(columns: T, records: Sequence<RetableRecord>, outputStream: OutputStream) {
         val sortedColumns = columns.list()
                 .sortedBy { it.index }
-        val csvPrinter = CSVPrinter(OutputStreamWriter(outputStream), CSVFormat.DEFAULT
+        val csvPrinter = CSVPrinter(OutputStreamWriter(outputStream), format
                 .withHeader(*sortedColumns
                         .map { it.name }
                         .toTypedArray()))
