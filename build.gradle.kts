@@ -1,7 +1,7 @@
 object Versions {
     val junit = "5.2.0"
     val strikt = "0.16.0"
-    val commonscsv = "1.5"
+    val commonscsv = "1.9.0"
     val poi = "3.17"
 }
 
