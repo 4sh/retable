@@ -2,11 +2,9 @@ package io.retable
 
 import org.junit.jupiter.api.Test
 import strikt.api.expectThat
-import strikt.assertions.contains
-import strikt.assertions.containsExactly
-import strikt.assertions.hasSize
-import strikt.assertions.isEqualTo
+import strikt.assertions.*
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 class RetableExcelTest {
 
@@ -14,18 +12,66 @@ class RetableExcelTest {
     @Test
     fun `should read xlsx with default settings`() {
         val retable = Retable.excel().read(
-                "/many_data.xlsx".resourceStream())
+            "/many_data.xlsx".resourceStream())
 
         val columns = RetableColumns.ofNames(
-                listOf("First name", "Last Name", "Age", "Date", "Time",
-                        "Link", "Math", "Sum", "Money", "Percent", "NumberAsString"))
+            listOf("First name", "Last Name", "Age", "Date", "Time",
+                "Link", "Math", "Sum", "Money", "Percent", "NumberAsString"))
         expectThat(retable.columns.list()).containsExactly(*columns.list().toTypedArray())
 
-        expectThat(retable.records.toList()).contains(
-                RetableRecord(columns,2, 4,
-                        listOf("Alfred", "Dalton", "12", "2006-11-06", "12:34:00",
-                                "http://example.com/dalton", "2.5", "14.5", "24", "0.05", "1234567890"))
-        )
+        expectThat(retable.records.toList()).hasSize(3).and {
+            get(1).and {
+                get { columns }.isEqualTo(columns)
+                get { recordNumber }.isEqualTo(2)
+                get { lineNumber }.isEqualTo(4)
+                get { rawData }.hasSize(11).and {
+                    get(0).isEqualTo("Alfred")
+                    get(1).isEqualTo("Dalton")
+                    get(2).isEqualTo("12")
+                    get(3).isEqualTo("2006-11-06")
+                    get(4).isEqualTo("12:34:00")
+                    get(5).isEqualTo("http://example.com/dalton")
+                    get(6).isEqualTo("2.5")
+                    get(7).isEqualTo("14.5")
+                    get(8).isEqualTo("24")
+                    get(9).isEqualTo("0.05")
+                    get(10).isEqualTo("1234567890")
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `should read xlsx with date format`() {
+        val options = ExcelReadOptions(defaultDateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+        val retable = Retable.excel(options).read(
+            "/many_data.xlsx".resourceStream())
+
+        val columns = RetableColumns.ofNames(
+            listOf("First name", "Last Name", "Age", "Date", "Time",
+                "Link", "Math", "Sum", "Money", "Percent", "NumberAsString"))
+        expectThat(retable.columns.list()).containsExactly(*columns.list().toTypedArray())
+
+        expectThat(retable.records.toList()).hasSize(3).and {
+            get(1).and {
+                get { columns }.isEqualTo(columns)
+                get { recordNumber }.isEqualTo(2)
+                get { lineNumber }.isEqualTo(4)
+                get { rawData }.hasSize(11).and {
+                    get(0).isEqualTo("Alfred")
+                    get(1).isEqualTo("Dalton")
+                    get(2).isEqualTo("12")
+                    get(3).isEqualTo("06/11/2006")
+                    get(4).isEqualTo("12:34:00")
+                    get(5).isEqualTo("http://example.com/dalton")
+                    get(6).isEqualTo("2.5")
+                    get(7).isEqualTo("14.5")
+                    get(8).isEqualTo("24")
+                    get(9).isEqualTo("0.05")
+                    get(10).isEqualTo("1234567890")
+                }
+            }
+        }
     }
 
     @Test
