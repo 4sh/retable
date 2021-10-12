@@ -25,13 +25,14 @@ class RetableCSVSupport<T : RetableColumns>(
     options: CSVReadOptions = CSVReadOptions()
 ) : BaseSupport<T, CSVReadOptions>(columns, options) {
 
-    private val format: CSVFormat = CSVFormat
-        .newFormat(options.delimiter)
-        .withEscape(options.escape)
-        .withQuote(options.quote)
-        .withIgnoreEmptyLines(false) // this is handled by base support
-        .withTrim(false) // this is handled by base support
-        .withRecordSeparator(options.lineSeparator)
+    private val format: CSVFormat = CSVFormat.Builder.create()
+            .setDelimiter(options.delimiter)
+            .setEscape(options.escape)
+            .setQuote(options.quote)
+            .setIgnoreEmptyLines(false) // this is handled by base support
+            .setTrim(false) // this is handled by base support
+            .setRecordSeparator(options.lineSeparator)
+            .build()
 
     override fun iterator(input: InputStream): Iterator<List<String>> {
         val parse = format.parse(InputStreamReader(input, options.charset))
@@ -52,10 +53,13 @@ class RetableCSVSupport<T : RetableColumns>(
     override fun write(columns: T, records: Sequence<RetableRecord>, outputStream: OutputStream) {
         val sortedColumns = columns.list()
             .sortedBy { it.index }
-        val csvPrinter = CSVPrinter(OutputStreamWriter(outputStream), format
-            .withHeader(*sortedColumns
-                .map { it.name }
-                .toTypedArray()))
+        val csvPrinter = CSVPrinter(
+                OutputStreamWriter(outputStream),
+                CSVFormat.Builder.create(format)
+                        .setHeader(*sortedColumns
+                                .map { it.name }
+                                .toTypedArray())
+                        .build())
 
         records.forEach { record ->
             csvPrinter.printRecord(record.rawData)
