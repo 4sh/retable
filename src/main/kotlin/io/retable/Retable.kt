@@ -6,6 +6,7 @@ import io.valkee.ValkeeBuilder
 import java.io.InputStream
 import java.io.OutputStream
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import kotlin.reflect.full.isSubclassOf
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.jvmErasure
@@ -50,6 +51,10 @@ class Retable<T : RetableColumns>(
     }
 
     companion object {
+        fun gsheet(options:GSheetReadOptions) = gsheet(RetableColumns.auto, options)
+        fun <T : RetableColumns> gsheet(columns:T, options:GSheetReadOptions)
+                = RetableGSheetSupport(columns, options)
+
         fun csv(options:CSVReadOptions = CSVReadOptions()) = csv(RetableColumns.auto, options)
         fun <T : RetableColumns> csv(columns:T, options:CSVReadOptions
                 = CSVReadOptions()) = RetableCSVSupport(columns, options)
@@ -209,8 +214,9 @@ abstract class RetableColumns {
     fun localDate(name:String,
                   index:Int = c++,
                   headerConstraint: (RetableColumn<LocalDate>) ->  HeaderConstraint = HeaderConstraints.eq,
-                  constraint: ValkeeBuilder<LocalDate>.() -> DataValueConstraint<LocalDate?, *> = { DataConstraints.none() }) =
-            LocalDateRetableColumn(index, name, headerConstraint, constraint.invoke(Valkee()))
+                  constraint: ValkeeBuilder<LocalDate>.() -> DataValueConstraint<LocalDate?, *> = { DataConstraints.none() },
+                  format: String? = null) =
+            LocalDateRetableColumn(index, name, headerConstraint, constraint.invoke(Valkee()), format = format)
 
 
     fun double(name: String,
@@ -290,10 +296,12 @@ class IntRetableColumn(index:Int, name:String,
 
 class LocalDateRetableColumn(index: Int, name: String,
                              headerConstraint: (RetableColumn<LocalDate>) -> HeaderConstraint,
-                             constraint: DataValueConstraint<LocalDate?, *>)
+                             constraint: DataValueConstraint<LocalDate?, *>,
+                             val format: String?)
     : RetableColumn<LocalDate>(index, name, headerConstraint, Validations.Strings.isInteger(), constraint) {
 
-    override fun getFromRaw(raw: String): LocalDate = LocalDate.parse(raw)
+    override fun getFromRaw(raw: String): LocalDate = if (format != null) {
+        LocalDate.parse(raw, DateTimeFormatter.ofPattern(format))} else { LocalDate.parse(raw) }
 }
 class DoubleRetableColumn(index: Int, name: String,
                           headerConstraint: (RetableColumn<Double>) -> HeaderConstraint,
