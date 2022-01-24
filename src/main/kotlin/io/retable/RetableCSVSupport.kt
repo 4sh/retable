@@ -12,7 +12,7 @@ class CSVReadOptions(
     val charset: Charset = Charsets.UTF_8,
     val delimiter: Char = ',',
     val escape: Char? = null,
-    val quote: Char = '"',
+    val quote: Char? = '"',
     val lineSeparator: String = "\r\n",
     trimValues: Boolean = true,
     ignoreEmptyLines: Boolean = true,
