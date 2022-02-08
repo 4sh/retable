@@ -195,9 +195,10 @@ abstract class RetableColumns {
     fun string(name:String,
                index:Int = c++,
                headerConstraint: (RetableColumn<String>) ->  HeaderConstraint = HeaderConstraints.eq,
+               writeUrlAsHyperlink: Boolean = true,
                constraint: ValkeeBuilder<String>.() -> DataValueConstraint<String?, *> = { DataConstraints.none() }
                ) =
-            StringRetableColumn(index, name, headerConstraint, constraint.invoke(Valkee()))
+            StringRetableColumn(index, name, headerConstraint, constraint.invoke(Valkee()), writeUrlAsHyperlink)
 
     fun int(name:String,
             index:Int = c++,
@@ -239,7 +240,8 @@ class ListRetableColumns(private val cols:List<RetableColumn<*>>):RetableColumns
 abstract class RetableColumn<T>(val index:Int, val name:String,
                                 headerRule: (RetableColumn<T>) -> HeaderConstraint,
                                 rawConstraint: DataValueConstraint<String?, *>,
-                                constraint: DataValueConstraint<T?, *>) {
+                                constraint: DataValueConstraint<T?, *>,
+                                val writeUrlAsHyperlink: Boolean = true) {
     val headerConstraint:HeaderConstraint =
             headerRule.invoke(this)
     val rawDataConstraint:DataConstraint =
@@ -273,8 +275,9 @@ abstract class RetableColumn<T>(val index:Int, val name:String,
 
 class StringRetableColumn(index:Int, name:String,
                           headerConstraint: (RetableColumn<String>) ->  HeaderConstraint,
-                          constraint: DataValueConstraint<String?, *>)
-    : RetableColumn<String>(index, name, headerConstraint, DataConstraints.none(), constraint) {
+                          constraint: DataValueConstraint<String?, *>,
+                          writeUrlAsHyperlink: Boolean = true)
+    : RetableColumn<String>(index, name, headerConstraint, DataConstraints.none(), constraint, writeUrlAsHyperlink) {
     override fun getFromRaw(raw: String): String = raw
 }
 class IntRetableColumn(index:Int, name:String,
