@@ -1,11 +1,10 @@
 package io.retable
 
-import org.apache.poi.ss.usermodel.Cell
-import org.apache.poi.ss.usermodel.CellType
-import org.apache.poi.ss.usermodel.DateUtil
-import org.apache.poi.ss.usermodel.WorkbookFactory
+import org.apache.poi.common.usermodel.HyperlinkType
+import org.apache.poi.ss.usermodel.*
 import org.apache.poi.xssf.usermodel.XSSFCell
 import org.apache.poi.xssf.usermodel.XSSFCellStyle
+import org.apache.poi.xssf.usermodel.XSSFFont
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import java.io.InputStream
 import java.io.OutputStream
@@ -74,6 +73,14 @@ class RetableExcelSupport<T : RetableColumns>(
         val styleDate = workbook.createCellStyle()
         styleDate.dataFormat = workbook.creationHelper.createDataFormat().getFormat("m/d/yy")
 
+        val hyperlinkStyle = workbook.createCellStyle().also { style ->
+            style.setFont(workbook.createFont().also {
+                it.underline = XSSFFont.U_SINGLE
+                it.color = IndexedColors.BLUE.index
+            })
+        }
+
+
         records.forEachIndexed { index, record ->
             val row = sheet.createRow(record.lineNumber.toInt() - 1)
             columns.list().forEach { col ->
@@ -87,8 +94,15 @@ class RetableExcelSupport<T : RetableColumns>(
                         is LocalDate -> writeLocalDateCell(workbook, cell, styleDate, value)
                         is Instant -> cell.setCellValue(Date(value.toEpochMilli()))
                         else -> {
-                            cell.setCellValue(value.toString())
-                            cell.cellStyle = styleText
+                            val stringValue = value.toString()
+                            cell.setCellValue(stringValue)
+                            if (col.writeUrlAsHyperlink && stringValue.isUrl()) {
+                                cell.hyperlink = workbook.creationHelper.createHyperlink(HyperlinkType.URL)
+                                    .also { it.address = stringValue }
+                                cell.cellStyle = hyperlinkStyle
+                            } else {
+                                cell.cellStyle = styleText
+                            }
                         }
                     }
                 }
@@ -146,5 +160,8 @@ class RetableExcelSupport<T : RetableColumns>(
                 this.reversed().indexOfFirst { !it?.toString().isNullOrBlank() })
         )
     }
+
+    private fun String.isUrl(): Boolean =
+        take(7) == "http://" || take(8) == "https://"
 }
 

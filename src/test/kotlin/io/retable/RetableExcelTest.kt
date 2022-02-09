@@ -3,11 +3,12 @@ package io.retable
 import org.junit.jupiter.api.Test
 import strikt.api.expectThat
 import strikt.assertions.*
+import java.io.File
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 class RetableExcelTest {
-
+    fun pathTo(s:String) = "src/test/resources/examples/$s"
 
     @Test
     fun `should read xlsx with default settings`() {
@@ -144,6 +145,50 @@ class RetableExcelTest {
                         RetableRecord(retable.columns,1, 2,
                                 listOf("Alfred", "Dalton"))
         )
+    }
+
+    @Test
+    fun `should export with hyperlink`() {
+        val resultFilePath = pathTo("export_with_hyperlink.xlsx")
+
+        Retable(
+            RetableColumns.ofNames(listOf("first_name", "last_name", "url"))
+        )
+            .data(
+                listOf(
+                    listOf("John",  "Doe", "https://google.fr"),
+                    listOf("Jenny", "Boe", "http://4sh.fr")
+                )
+            )
+            .write(Retable.excel() to File(resultFilePath).outputStream())
+
+
+        expectThat(File(resultFilePath)) {
+            get {exists()}.isTrue()
+        }
+    }
+
+    @Test
+    fun `should export with hyperlink as raw string`() {
+        val resultFilePath = pathTo("export_with_raw_hyperlink.xlsx")
+        val columns = object:RetableColumns() {
+            val FIRST_NAME = string("first_name", index = 2)
+            val LAST_NAME  = string("last_name", index = 1)
+            val URL        = string("url", index = 3, writeUrlAsHyperlink = false)
+        }
+        Retable(columns)
+            .data(
+                listOf(
+                    listOf("John",  "Doe", "https://google.fr"),
+                    listOf("Jenny", "Boe", "http://4sh.fr")
+                )
+            )
+            .write(Retable.excel(columns) to File(resultFilePath).outputStream())
+
+
+        expectThat(File(resultFilePath)) {
+            get {exists()}.isTrue()
+        }
     }
 
 
