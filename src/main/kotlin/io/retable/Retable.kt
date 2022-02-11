@@ -60,7 +60,7 @@ class Retable<T : RetableColumns>(
     }
 }
 
-abstract class BaseSupport<T : RetableColumns, O : ReadOptions>(val columns: RetableColumns, val options:O) {
+abstract class BaseSupport<T : RetableColumns, O : ReadOptions>(val columns: RetableColumns, open val options:O) {
     abstract fun iterator(input: InputStream): Iterator<List<String>>
     abstract fun write(columns: T, records: Sequence<RetableRecord>, outputStream: OutputStream)
 

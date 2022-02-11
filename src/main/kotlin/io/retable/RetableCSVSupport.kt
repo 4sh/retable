@@ -14,6 +14,7 @@ class CSVReadOptions(
     val escape: Char? = null,
     val quote: Char = '"',
     val lineSeparator: String = "\r\n",
+    val removeFirstFormulaChars: Boolean = false,
     trimValues: Boolean = true,
     ignoreEmptyLines: Boolean = true,
     firstRecordAsHeader: Boolean = true
@@ -22,7 +23,7 @@ class CSVReadOptions(
 
 class RetableCSVSupport<T : RetableColumns>(
     columns: T,
-    options: CSVReadOptions = CSVReadOptions()
+    override val options: CSVReadOptions = CSVReadOptions()
 ) : BaseSupport<T, CSVReadOptions>(columns, options) {
 
     private val format: CSVFormat = CSVFormat.Builder.create()
@@ -62,7 +63,13 @@ class RetableCSVSupport<T : RetableColumns>(
                         .build())
 
         records.forEach { record ->
-            csvPrinter.printRecord(record.rawData)
+            var cleanedRecordRawData = record.rawData
+            if (options.removeFirstFormulaChars) {
+                cleanedRecordRawData = record.rawData.map {
+                    it.replace("^(=|\\+|-|@|0x09|0x0D)*".toRegex(), "")
+                }
+            }
+            csvPrinter.printRecord(cleanedRecordRawData)
         }
 
         csvPrinter.flush()
