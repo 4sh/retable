@@ -89,8 +89,8 @@ class RetableCSVTest {
         Retable(columns)
                 .data(
                         listOf(
-                                Person("John", "Doe", 23),
-                                Person("Jenny", "Boe", 25)
+                                Person("@+==0x09==+-+John", "@+==0x09==+-+Doe", 23),
+                                Person("@+==0x09==+-+Jenny", "@+==0x09==+-+Boe", 25)
                         )
                 ) {
                     mapOf(
@@ -134,6 +134,35 @@ class RetableCSVTest {
                     )
                 }
                 .write(Retable.csv(columns) to File(resultFilePath).outputStream())
+
+        expectThat(File(resultFilePath)) {
+            get {exists()}.isTrue()
+        }
+    }
+
+
+    @Test
+    fun `should export cleaning formula chars starting cells`() {
+        val resultFilePath = pathTo("export_data_cleaned_from_formula_chars.csv")
+        val columns = object:RetableColumns() {
+            val FIRST_NAME = string("first_name", index = 2)
+            val LAST_NAME  = string("last_name", index = 1)
+            val AGE        = int("age", index = 3)
+        }
+        Retable(columns)
+                .data(
+                        listOf(
+                                Person("@+==0x09==+-+John", "@+==0x09==+-+Doe", 23),
+                                Person("@+==0x09==+-+Jenny", "@+==0x09==+-+Boe", 25)
+                        )
+                ) {
+                    mapOf(
+                            FIRST_NAME to it.firstName,
+                            LAST_NAME to it.lastName,
+                            AGE to it.age
+                    )
+                }
+                .write(Retable.csv(columns, CSVReadOptions(removeFirstFormulaChars = true)) to File(resultFilePath).outputStream())
 
         expectThat(File(resultFilePath)) {
             get {exists()}.isTrue()
