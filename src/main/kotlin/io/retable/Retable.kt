@@ -220,7 +220,7 @@ abstract class RetableColumns {
             DoubleRetableColumn(index, name, headerConstraint, constraint.invoke(Valkee()))
 
 
-    val maxIndex:Int get() = list().map { it.index }.max()?:0
+    val maxIndex:Int get() = list().maxOfOrNull { it.index } ?:0
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
