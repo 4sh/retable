@@ -280,6 +280,14 @@ Note: Only basic Excel write is supported yet
              */
 ```
 
+## G-Sheet support
+### Configuration
+To be allowed to access to your Google Drive and read/write on Google spreadsheet, you must generate and OAuth 2.0 
+Client Ids from the Google cloud console in section [APIs & services > Credentials](https://console.cloud.google.com/apis/credentials)
+
+Then, download your credential as json file and give it to your `GSheetReadOptions.credentialFilePath` (by default 
+Retable take the file `credentials.json` in the `resources` directory)
+
 ## Installation
 
 retable has not been released yet, but you can use jitpack to obtain it:
