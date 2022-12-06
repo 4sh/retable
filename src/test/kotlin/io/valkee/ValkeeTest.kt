@@ -67,7 +67,7 @@ class ValkeeTest {
 
     @Test
     fun `should validate object with string and int properties`() {
-        data class User(val name:String,val age:Int)
+        data class User(val name: String, val age: Int)
 
         val rule = Valkee<User>().constraints {
             on(User::name) {
@@ -88,17 +88,14 @@ class ValkeeTest {
         expectThat(rule.validate(User("John", 140)).severity).isEqualTo(ValkeeSeverity.ERROR)
     }
 
-
-
-    fun <S,V,E,R> Assertion.Builder<RuleCheck<S, V, E, R>>.rule(): Assertion.Builder<ValkeeRule<S, V, E, R>>
-        = get(RuleCheck<S, V, E, R>::rule)
-    fun <S,V,E,R> Assertion.Builder<RuleCheck<S, V, E, R>>.subject(): Assertion.Builder<S>
-        = get(RuleCheck<S, V, E, R>::subject)
-    fun <S,V,E,R> Assertion.Builder<RuleCheck<S, V, E, R>>.value(): Assertion.Builder<V>
-        = get(RuleCheck<S, V, E, R>::value)
-    fun <S,V,E,R> Assertion.Builder<RuleCheck<S, V, E, R>>.severity(): Assertion.Builder<ValkeeSeverity>
-        = get(RuleCheck<S, V, E, R>::severity)
-    fun <S,V,E,R> Assertion.Builder<RuleCheck<S, V, E, R>>.message(): Assertion.Builder<String>
-        = get(RuleCheck<S, V, E, R>::message)
+    fun <S, V, E, R> Assertion.Builder<RuleCheck<S, V, E, R>>.rule(): Assertion.Builder<ValkeeRule<S, V, E, R>> =
+        get(RuleCheck<S, V, E, R>::rule)
+    fun <S, V, E, R> Assertion.Builder<RuleCheck<S, V, E, R>>.subject(): Assertion.Builder<S> =
+        get(RuleCheck<S, V, E, R>::subject)
+    fun <S, V, E, R> Assertion.Builder<RuleCheck<S, V, E, R>>.value(): Assertion.Builder<V> =
+        get(RuleCheck<S, V, E, R>::value)
+    fun <S, V, E, R> Assertion.Builder<RuleCheck<S, V, E, R>>.severity(): Assertion.Builder<ValkeeSeverity> =
+        get(RuleCheck<S, V, E, R>::severity)
+    fun <S, V, E, R> Assertion.Builder<RuleCheck<S, V, E, R>>.message(): Assertion.Builder<String> =
+        get(RuleCheck<S, V, E, R>::message)
 }
-

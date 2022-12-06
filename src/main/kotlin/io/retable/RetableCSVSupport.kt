@@ -20,20 +20,19 @@ class CSVReadOptions(
     firstRecordAsHeader: Boolean = true
 ) : ReadOptions(trimValues, ignoreEmptyLines, firstRecordAsHeader)
 
-
 class RetableCSVSupport<T : RetableColumns>(
     columns: T,
     override val options: CSVReadOptions = CSVReadOptions()
 ) : BaseSupport<T, CSVReadOptions>(columns, options) {
 
     private val format: CSVFormat = CSVFormat.Builder.create()
-            .setDelimiter(options.delimiter)
-            .setEscape(options.escape)
-            .setQuote(options.quote)
-            .setIgnoreEmptyLines(false) // this is handled by base support
-            .setTrim(false) // this is handled by base support
-            .setRecordSeparator(options.lineSeparator)
-            .build()
+        .setDelimiter(options.delimiter)
+        .setEscape(options.escape)
+        .setQuote(options.quote)
+        .setIgnoreEmptyLines(false) // this is handled by base support
+        .setTrim(false) // this is handled by base support
+        .setRecordSeparator(options.lineSeparator)
+        .build()
 
     override fun iterator(input: InputStream): Iterator<List<String>> {
         val parse = format.parse(InputStreamReader(input, options.charset))
@@ -55,12 +54,15 @@ class RetableCSVSupport<T : RetableColumns>(
         val sortedColumns = columns.list()
             .sortedBy { it.index }
         val csvPrinter = CSVPrinter(
-                OutputStreamWriter(outputStream),
-                CSVFormat.Builder.create(format)
-                        .setHeader(*sortedColumns
-                                .map { it.name }
-                                .toTypedArray())
-                        .build())
+            OutputStreamWriter(outputStream),
+            CSVFormat.Builder.create(format)
+                .setHeader(
+                    *sortedColumns
+                        .map { it.name }
+                        .toTypedArray()
+                )
+                .build()
+        )
 
         records.forEach { record ->
             var cleanedRecordRawData = record.rawData

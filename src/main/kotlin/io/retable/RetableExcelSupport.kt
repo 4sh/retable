@@ -15,7 +15,6 @@ import java.time.format.DateTimeFormatter
 import java.util.*
 import kotlin.math.roundToLong
 
-
 class ExcelReadOptions(
     val sheetName: String? = null, // sheet name (used in priority over sheet index, if provided)
     val sheetIndex: Int? = null, // sheet index (one based)
@@ -26,7 +25,8 @@ class ExcelReadOptions(
 ) : ReadOptions(trimValues, ignoreEmptyLines, firstRecordAsHeader)
 
 class RetableExcelSupport<T : RetableColumns>(
-    columns: T, options: ExcelReadOptions = ExcelReadOptions()
+    columns: T,
+    options: ExcelReadOptions = ExcelReadOptions()
 ) : BaseSupport<T, ExcelReadOptions>(columns, options) {
     override fun iterator(input: InputStream): Iterator<List<String>> {
         val workbook = WorkbookFactory.create(input)
@@ -74,12 +74,13 @@ class RetableExcelSupport<T : RetableColumns>(
         styleDate.dataFormat = workbook.creationHelper.createDataFormat().getFormat("m/d/yy")
 
         val hyperlinkStyle = workbook.createCellStyle().also { style ->
-            style.setFont(workbook.createFont().also {
-                it.underline = XSSFFont.U_SINGLE
-                it.color = IndexedColors.BLUE.index
-            })
+            style.setFont(
+                workbook.createFont().also {
+                    it.underline = XSSFFont.U_SINGLE
+                    it.color = IndexedColors.BLUE.index
+                }
+            )
         }
-
 
         records.forEachIndexed { index, record ->
             val row = sheet.createRow(record.lineNumber.toInt() - 1)
@@ -156,12 +157,14 @@ class RetableExcelSupport<T : RetableColumns>(
         // empty cells - therefore we remove trailing empty cells in the list of rawData, and when accessing cells
         // exceeding index is handled anyway
         return this.subList(
-            0, this.size - kotlin.math.max(0,
-                this.reversed().indexOfFirst { !it?.toString().isNullOrBlank() })
+            0,
+            this.size - kotlin.math.max(
+                0,
+                this.reversed().indexOfFirst { !it?.toString().isNullOrBlank() }
+            )
         )
     }
 
     private fun String.isUrl(): Boolean =
         take(7) == "http://" || take(8) == "https://"
 }
-

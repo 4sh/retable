@@ -53,49 +53,55 @@ enum class ValkeeSeverity {
 }
 
 data class ValkeeProperty<in S, out V>(
-        val name:String,
-        val accessor: (S) -> V
+    val name: String,
+    val accessor: (S) -> V
 )
 
 data class ValkeeRule<S, V, E, R>(
-        val id:String,
-        val name:String,
-        val severity: ValkeeSeverity = ValkeeSeverity.ERROR,
-        val property: ValkeeProperty<S, V>,
-        val expectation: E,
-        val predicate: (V, E) -> Pair<Boolean, R>,
-        val messageBuilder: ValkeeRuleMessageBuilder<S, V, E, R>
+    val id: String,
+    val name: String,
+    val severity: ValkeeSeverity = ValkeeSeverity.ERROR,
+    val property: ValkeeProperty<S, V>,
+    val expectation: E,
+    val predicate: (V, E) -> Pair<Boolean, R>,
+    val messageBuilder: ValkeeRuleMessageBuilder<S, V, E, R>
 ) {
-    fun validate(subject:S): RuleCheck<S, V, E, R> {
+    fun validate(subject: S): RuleCheck<S, V, E, R> {
         val value = property.accessor(subject)
         val (valid, result) = predicate(value, expectation)
 
-        return RuleCheck(this, subject, value, result,
-                    if (valid) {ValkeeSeverity.OK} else {severity},
-                    messageBuilder.buildMessage(valid))
+        return RuleCheck(
+            this,
+            subject,
+            value,
+            result,
+            if (valid) { ValkeeSeverity.OK } else { severity },
+            messageBuilder.buildMessage(valid)
+        )
     }
 }
 
-typealias ValkeeComposedRule<S,V, VV, VE, VR> = ValkeeRule<S, V, ValkeeRule<V, VV, VE, VR>, RuleCheck<V, VV, VE, VR>>
+typealias ValkeeComposedRule<S, V, VV, VE, VR> = ValkeeRule<S, V, ValkeeRule<V, VV, VE, VR>, RuleCheck<V, VV, VE, VR>>
 
 data class ValkeeRuleMessageBuilder<S, V, E, R>(
-        private val validMessage: I18nMessage,
-        private val invalidMessage: I18nMessage,
-        private val templateResolver:(String, RuleCheckMessageTemplate.Context<S, V, E, R>) -> String,
-        private val i18nResolver: (String) -> String
+    private val validMessage: I18nMessage,
+    private val invalidMessage: I18nMessage,
+    private val templateResolver: (String, RuleCheckMessageTemplate.Context<S, V, E, R>) -> String,
+    private val i18nResolver: (String) -> String
 ) {
-    fun buildMessage(valid:Boolean):RuleCheckMessageTemplate<S, V, E, R> =
-            RuleCheckMessageTemplate(if (valid) {validMessage} else {invalidMessage}, templateResolver, i18nResolver)
+    fun buildMessage(valid: Boolean): RuleCheckMessageTemplate<S, V, E, R> =
+        RuleCheckMessageTemplate(if (valid) { validMessage } else { invalidMessage }, templateResolver, i18nResolver)
 }
 
-data class I18nMessage(val i18nKey:String, val defaultMessage:String)
+data class I18nMessage(val i18nKey: String, val defaultMessage: String)
 
-data class RuleCheck<S, V, E, R>(val rule: ValkeeRule<S, V, E, R>,
-                                 val subject:S,
-                                 val value:V,
-                                 val result:R,
-                                 val severity: ValkeeSeverity,
-                                 val messageTemplate: RuleCheckMessageTemplate<S, V, E, R>
+data class RuleCheck<S, V, E, R>(
+    val rule: ValkeeRule<S, V, E, R>,
+    val subject: S,
+    val value: V,
+    val result: R,
+    val severity: ValkeeSeverity,
+    val messageTemplate: RuleCheckMessageTemplate<S, V, E, R>
 ) {
     fun message() = messageTemplate.buildDefaultMessage(this)
     fun i18nMessage() = messageTemplate.buildI18nMessage(this)
@@ -105,30 +111,32 @@ data class RuleCheck<S, V, E, R>(val rule: ValkeeRule<S, V, E, R>,
     fun toPair(): Pair<Boolean, RuleCheck<S, V, E, R>> = isValid() to this
 }
 
-
 data class RuleCheckMessageTemplate<S, V, E, R>(
-        val message:I18nMessage,
-        private val templateResolver:(String, RuleCheckMessageTemplate.Context<S, V, E, R>) -> String,
-        private val i18nResolver: (String) -> String) {
+    val message: I18nMessage,
+    private val templateResolver: (String, RuleCheckMessageTemplate.Context<S, V, E, R>) -> String,
+    private val i18nResolver: (String) -> String
+) {
     fun buildDefaultMessage(ruleCheck: RuleCheck<S, V, E, R>): String = buildMessage(message.defaultMessage, ruleCheck)
 
     fun buildI18nMessage(ruleCheck: RuleCheck<S, V, E, R>): String =
-            buildMessage(   i18nResolver(
-                                if (message.i18nKey.startsWith(".")) { ruleCheck.rule.id + message.i18nKey }
-                                else { message.i18nKey }),
-                            ruleCheck)
+        buildMessage(
+            i18nResolver(
+                if (message.i18nKey.startsWith(".")) { ruleCheck.rule.id + message.i18nKey } else { message.i18nKey }
+            ),
+            ruleCheck
+        )
 
-    private fun buildMessage(template:String, ruleCheck: RuleCheck<S, V, E, R>): String =
-            templateResolver(template, Context(ruleCheck))
+    private fun buildMessage(template: String, ruleCheck: RuleCheck<S, V, E, R>): String =
+        templateResolver(template, Context(ruleCheck))
 
     data class Context<S, V, E, R>(
-            val check: RuleCheck<S, V, E, R>,
-            val rule: ValkeeRule<S, V, E, R> = check.rule,
-            val subject: S = check.subject,
-            val value:V = check.value,
-            val expectation:E = check.rule.expectation,
-            val result:R = check.result,
-            val valid:Boolean = check.isValid(),
-            val severity: ValkeeSeverity = check.severity
+        val check: RuleCheck<S, V, E, R>,
+        val rule: ValkeeRule<S, V, E, R> = check.rule,
+        val subject: S = check.subject,
+        val value: V = check.value,
+        val expectation: E = check.rule.expectation,
+        val result: R = check.result,
+        val valid: Boolean = check.isValid(),
+        val severity: ValkeeSeverity = check.severity
     )
 }

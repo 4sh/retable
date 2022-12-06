@@ -14,7 +14,7 @@ class RetableTest {
 
     @Test
     fun `should list columns`() {
-        val cols = object:RetableColumns() {
+        val cols = object : RetableColumns() {
             val test1 = string("test1")
             val test2 = int("test2")
             val notAColumn = "test3"
@@ -23,14 +23,13 @@ class RetableTest {
         expectThat(cols.list()).containsExactly(cols.test1, cols.test2)
     }
 
-
     @Test
     fun `should access data by col name in a row`() {
         val columns = RetableColumns.ofNames(listOf("first_name", "last_name"))
 
-        expectThat(RetableRecord(columns,1, 2, listOf("Xavier", "Hanin"))) {
-            get {this["first_name"] }.isEqualTo("Xavier")
-            get {this["last_name"] }.isEqualTo("Hanin")
+        expectThat(RetableRecord(columns, 1, 2, listOf("Xavier", "Hanin"))) {
+            get { this["first_name"] }.isEqualTo("Xavier")
+            get { this["last_name"] }.isEqualTo("Hanin")
         }
     }
 
@@ -38,9 +37,9 @@ class RetableTest {
     fun `should allow missing values in a row`() {
         val columns = RetableColumns.ofNames(listOf("first_name", "last_name"))
 
-        expectThat(RetableRecord(columns,1, 2, listOf("Xavier"))) {
-            get {this["last_name"] }.isNull()
-            get {this.rawGet(columns[2]) }.isNull()
+        expectThat(RetableRecord(columns, 1, 2, listOf("Xavier"))) {
+            get { this["last_name"] }.isNull()
+            get { this.rawGet(columns[2]) }.isNull()
         }
     }
 
@@ -59,9 +58,9 @@ class RetableTest {
         expectThat(retable.columns.list()).containsExactly(*columns.list().toTypedArray())
 
         expectThat(retable.records).containsExactly(
-                RetableRecord(columns,1, 2, listOf("Xavier", "Hanin")),
-                RetableRecord(columns,2, 3, listOf("Alfred", "Dalton")),
-                RetableRecord(columns,3, 4, listOf("Victor", "Hugo"))
+            RetableRecord(columns, 1, 2, listOf("Xavier", "Hanin")),
+            RetableRecord(columns, 2, 3, listOf("Alfred", "Dalton")),
+            RetableRecord(columns, 3, 4, listOf("Victor", "Hugo"))
         )
     }
 
@@ -74,7 +73,7 @@ class RetableTest {
             Victor,Hugo,88
         """.trimIndent()
 
-        val columns = object:RetableColumns() {
+        val columns = object : RetableColumns() {
             val firstName = string("first_name")
             val lastName = string("last_name")
             val age = int("age")
@@ -87,9 +86,9 @@ class RetableTest {
         val records = retable.records.toList()
 
         expectThat(records).containsExactly(
-                RetableRecord(columns,1, 2, listOf("Xavier", "Hanin", "41")),
-                RetableRecord(columns,2, 3, listOf("Alfred", "Dalton", "12")),
-                RetableRecord(columns,3, 4, listOf("Victor", "Hugo", "88"))
+            RetableRecord(columns, 1, 2, listOf("Xavier", "Hanin", "41")),
+            RetableRecord(columns, 2, 3, listOf("Alfred", "Dalton", "12")),
+            RetableRecord(columns, 3, 4, listOf("Victor", "Hugo", "88"))
         )
 
         val firstRecord = records[0]
@@ -107,35 +106,37 @@ class RetableTest {
             Alfred,Dalton,12
         """.trimIndent()
 
-        val retable = Retable.csv(columns = object:RetableColumns() {
-            val firstName = string("first_name")
-            val lastName = string("last_name")
-            val age = int("age")
-        }).read(ByteArrayInputStream(csv.toByteArray(Charsets.UTF_8)))
+        val retable = Retable.csv(
+            columns = object : RetableColumns() {
+                val firstName = string("first_name")
+                val lastName = string("last_name")
+                val age = int("age")
+            }
+        ).read(ByteArrayInputStream(csv.toByteArray(Charsets.UTF_8)))
 
         retable.columns.apply {
             expectThat(
-                    retable.records
-                    .filter { it[age]?:0 > 18 }
+                retable.records
+                    .filter { it[age] ?: 0 > 18 }
                     .map { "Hello ${it[firstName]} ${it[lastName]}" }
                     .joinToString()
             ).isEqualTo("Hello Xavier Hanin")
         }
     }
 
-
     @Test
     fun `should read simple xlsx with default settings`() {
         val retable = Retable.excel().read(
-                "/simple_data.xlsx".resourceStream())
+            "/simple_data.xlsx".resourceStream()
+        )
 
         val columns = RetableColumns.ofNames(listOf("first_name", "last_name"))
         expectThat(retable.columns.list()).containsExactly(*columns.list().toTypedArray())
 
         expectThat(retable.records).containsExactly(
-                RetableRecord(columns,1, 2, listOf("Xavier", "Hanin")),
-                RetableRecord(columns,2, 3, listOf("Alfred", "Dalton")),
-                RetableRecord(columns,3, 4, listOf("Victor", "Hugo"))
+            RetableRecord(columns, 1, 2, listOf("Xavier", "Hanin")),
+            RetableRecord(columns, 2, 3, listOf("Alfred", "Dalton")),
+            RetableRecord(columns, 3, 4, listOf("Victor", "Hugo"))
         )
     }
 
@@ -149,12 +150,12 @@ class RetableTest {
         "AZ,  52",
         "BA,  53"
     )
-    fun `should convert column indexes`(c:String, index:Int) {
+    fun `should convert column indexes`(c: String, index: Int) {
         expectThat(col(c)).isEqualTo(index)
     }
 
     // helper extensions
     fun String.resourceStream() = RetableTest::class.java.getResourceAsStream(this)
-    fun <T : Sequence<E>, E> Assertion.Builder<T>.containsExactly(vararg elements: E): Assertion.Builder<List<E>>
-     = this.get { toList() }.containsExactly(*elements)
+    fun <T : Sequence<E>, E> Assertion.Builder<T>.containsExactly(vararg elements: E): Assertion.Builder<List<E>> =
+        this.get { toList() }.containsExactly(*elements)
 }

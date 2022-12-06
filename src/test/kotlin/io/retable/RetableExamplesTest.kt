@@ -10,14 +10,14 @@ import java.time.LocalDate
 
 class RetableExamplesTest {
     val out = StringBuilder()
-    fun println(a:Any?) {
-        out.append(a?.toString()?:"null").append("\n")
+    fun println(a: Any?) {
+        out.append(a?.toString() ?: "null").append("\n")
     }
     private fun expectOut(s: String) {
         expectThat(out.toString()).isEqualTo(s.trimIndent() + "\n")
     }
 
-    fun pathTo(s:String) = "src/test/resources/examples/$s"
+    fun pathTo(s: String) = "src/test/resources/examples/$s"
 
     @Test
     fun `should introduction example work`() {
@@ -25,10 +25,10 @@ class RetableExamplesTest {
         File(pathTo("simple_data.csv")).inputStream().use {
             val hello =
                 Retable.csv().read(it) // read as csv with default settings
-                    .records       // access the records sequence
+                    .records // access the records sequence
                     .map { it["first_name"] + " " + it["last_name"] } // access data by column name (headers in file)
-                    .first()       // sequence is consumed only on call, so getting first record in a large file is fast
-            println(hello)  // prints `Xavier Hanin`
+                    .first() // sequence is consumed only on call, so getting first record in a large file is fast
+            println(hello) // prints `Xavier Hanin`
         }
 
         expectOut("Xavier Hanin")
@@ -39,16 +39,15 @@ class RetableExamplesTest {
         // opens and use an input stream with std kotlin
         File(pathTo("simple_data.xlsx")).inputStream().use {
             val hello =
-                    Retable.excel().read(it) // read as excel with default settings
-                            .records       // access the records sequence
-                            .map { it["first_name"] + " " + it["last_name"] } // access data by column name (headers in file)
-                            .first()       // sequence is consumed only on call, so getting first record in a large file is fast
-            println(hello)  // prints `Xavier Hanin`
+                Retable.excel().read(it) // read as excel with default settings
+                    .records // access the records sequence
+                    .map { it["first_name"] + " " + it["last_name"] } // access data by column name (headers in file)
+                    .first() // sequence is consumed only on call, so getting first record in a large file is fast
+            println(hello) // prints `Xavier Hanin`
         }
 
         expectOut("Xavier Hanin")
     }
-
 
     @Test
     fun `should access column names work`() {
@@ -58,7 +57,7 @@ class RetableExamplesTest {
             // you can access to the columns
             val colNames = retable.columns.list().map { it.name }.joinToString()
 
-            println(colNames)      // prints `first_name, last_name, age`
+            println(colNames) // prints `first_name, last_name, age`
         }
 
         expectOut("first_name, last_name, age")
@@ -68,7 +67,7 @@ class RetableExamplesTest {
     fun `should access record info work`() {
         File(pathTo("simple_data.csv")).inputStream().use {
             val record = Retable.csv().read(it)
-                    .records.first() // get first record
+                .records.first() // get first record
 
             record.apply {
                 // on the record you have access to:
@@ -86,28 +85,30 @@ class RetableExamplesTest {
     fun `should columns example work`() {
         File(pathTo("simple_data.csv")).inputStream().use {
             val retable = Retable
-                    .csv(
+                .csv(
                     // we can also define the expected columns
-                    object:RetableColumns() {
+                    object : RetableColumns() {
                         // each column is defined as a property on an object
                         val FIRST_NAME = string("first_name")
-                        val LAST_NAME  = string("last_name")
+                        val LAST_NAME = string("last_name")
+
                         // note that the column is typed - here the age is expectThated to be an Int
-                        val AGE        = int("age")
-                    })
-                    .read(it)
+                        val AGE = int("age")
+                    }
+                )
+                .read(it)
 
             // we will now be able to access data using the predefined columns, we `apply` them for ease of use
             retable.columns.apply {
                 val hello = retable.records
-                        // now we can access the column value on a record by its column
-                        // note that both the column (AGE) and its type (Int) are known by the compiler
-                        // the direct access to the column with `AGE` is made possible thanks to the `apply`
-                        .filter { it[AGE]?:0 > 18 }
-                        // see how easy it is to access the fields
-                        .map { "Hello ${it[FIRST_NAME]} ${it[LAST_NAME]}" }
-                        .joinToString()
-                println(hello)          // prints `Hello Xavier Hanin, Hello Victor Hugo`
+                    // now we can access the column value on a record by its column
+                    // note that both the column (AGE) and its type (Int) are known by the compiler
+                    // the direct access to the column with `AGE` is made possible thanks to the `apply`
+                    .filter { it[AGE] ?: 0 > 18 }
+                    // see how easy it is to access the fields
+                    .map { "Hello ${it[FIRST_NAME]} ${it[LAST_NAME]}" }
+                    .joinToString()
+                println(hello) // prints `Hello Xavier Hanin, Hello Victor Hugo`
             }
         }
 
@@ -118,55 +119,67 @@ class RetableExamplesTest {
     fun `should validation example work`() {
         File(pathTo("invalid_data.csv")).inputStream().use {
             val retable = Retable
-                    .csv(
-                            // we can set constraints on the columns
-                            object:RetableColumns() {
-                                // here we set a constraint on the length is in a given range
-                                // the constraint is defined in a block
-                                val FIRST_NAME = string("first_name") { length { inRange(3..20) } }
-                                // different code style, we set the constraint with a named parameter
-                                val LAST_NAME  = string("last_name",
-                                        constraint = { matches(Regex("[A-Za-z ]+"),
-                                                        "should only contain alpha and spaces")})
-                                // an int column will automatically check the value is an int
-                                val AGE        = int("age",
-                                        // and we can add other constraint too
-                                        constraint =  { inRange(0..120) })
-                            })
-                    .read(it)
+                .csv(
+                    // we can set constraints on the columns
+                    object : RetableColumns() {
+                        // here we set a constraint on the length is in a given range
+                        // the constraint is defined in a block
+                        val FIRST_NAME = string("first_name") { length { inRange(3..20) } }
+
+                        // different code style, we set the constraint with a named parameter
+                        val LAST_NAME = string(
+                            "last_name",
+                            constraint = {
+                                matches(
+                                    Regex("[A-Za-z ]+"),
+                                    "should only contain alpha and spaces"
+                                )
+                            }
+                        )
+
+                        // an int column will automatically check the value is an int
+                        val AGE = int(
+                            "age",
+                            // and we can add other constraint too
+                            constraint = { inRange(0..120) }
+                        )
+                    }
+                )
+                .read(it)
 
             retable.columns.apply {
                 val hello = retable.records
-                        .filter { it.isValid() } // we can check if a record is valid, and filter it out if we want
-                        .map { "Hello ${it[FIRST_NAME]} ${it[LAST_NAME]}" }
-                        .joinToString()
-                println(hello)          // prints `Hello Victor Hugo`
+                    .filter { it.isValid() } // we can check if a record is valid, and filter it out if we want
+                    .map { "Hello ${it[FIRST_NAME]} ${it[LAST_NAME]}" }
+                    .joinToString()
+                println(hello) // prints `Hello Victor Hugo`
 
                 // once the sequence of records has been consumed, the invalid records
                 // are available in a list
                 val invalid = retable.violations.records
-                        .map {
-                            "line ${it.lineNumber} - ${it[FIRST_NAME]} ${it[LAST_NAME]}\n" +
+                    .map {
+                        "line ${it.lineNumber} - ${it[FIRST_NAME]} ${it[LAST_NAME]}\n" +
                             "violations:\n" +
                             it.violations
-                                     .map { "${it.severity.name} - ${it.message()}" }
-                                     .joinToString("\n")
-                        }
-                        .joinToString("\n")
-                println(invalid)    // prints:
-                                    // ---
-                                    // line 2 - Xavier Hanin
-                                    // violations:
-                                    // ERROR - age 241 should be between 0 and 120
-                                    // line 3 - A Dalton
-                                    // violations:
-                                    // ERROR - first_name "A" length 1 should be between 3 and 20
-                                    // ERROR - age "TWELVE" should be an integer
-                                    // ---
+                                .map { "${it.severity.name} - ${it.message()}" }
+                                .joinToString("\n")
+                    }
+                    .joinToString("\n")
+                println(invalid) // prints:
+                // ---
+                // line 2 - Xavier Hanin
+                // violations:
+                // ERROR - age 241 should be between 0 and 120
+                // line 3 - A Dalton
+                // violations:
+                // ERROR - first_name "A" length 1 should be between 3 and 20
+                // ERROR - age "TWELVE" should be an integer
+                // ---
             }
         }
 
-        expectOut("""
+        expectOut(
+            """
             Hello Victor Hugo
             line 2 - Xavier Hanin
             violations:
@@ -175,21 +188,22 @@ class RetableExamplesTest {
             violations:
             ERROR - first_name "A" length 1 should be between 3 and 20
             ERROR - age "TWELVE" should be an integer
-            """)
+            """
+        )
     }
 
     @Test
     fun `should simple export example work`() {
         Retable(
-                // we define the column names
-                RetableColumns.ofNames(listOf("first_name", "last_name", "age"))
-            )
+            // we define the column names
+            RetableColumns.ofNames(listOf("first_name", "last_name", "age"))
+        )
             .data(
                 // we provide the data to write as either a list or a sequence
                 // of List<Any> (the list of values of each row)
                 listOf(
-                        listOf("John",  "Doe", 23),
-                        listOf("Jenny", "Boe", 25)
+                    listOf("John", "Doe", 23),
+                    listOf("Jenny", "Boe", 25)
                 )
             )
             // then we can just ask to write data to outputstream
@@ -206,34 +220,34 @@ class RetableExamplesTest {
              */
 
         expectThat(File(pathTo("export_data.xlsx"))) {
-            get {exists()}.isTrue()
+            get { exists() }.isTrue()
         }
     }
 
     @Test
     fun `should export columns example work`() {
         // we can also define typed columns with arbitrary indexes (or not)
-        val columns = object:RetableColumns() {
+        val columns = object : RetableColumns() {
             val FIRST_NAME = string("first_name", index = 2)
-            val LAST_NAME  = string("last_name", index = 1)
-            val AGE        = int("age", index = 3)
+            val LAST_NAME = string("last_name", index = 1)
+            val AGE = int("age", index = 3)
         }
         Retable(columns)
             .data(
-                    // we provide the data to write as either a list or a sequence
-                    // of any kind
-                    listOf(
-                            Person("John", "Doe", 23),
-                            Person("Jenny", "Boe", 25)
-                    )
-            ) {     // with the mapper function to transform then to map <column -> value>
-                    mapOf(
-                            // columns are easily accessible in this context
-                            // (the receiver is the RetableColumns object defined above)
-                            FIRST_NAME to it.firstName,
-                            LAST_NAME to it.lastName,
-                            AGE to it.age
-                    )
+                // we provide the data to write as either a list or a sequence
+                // of any kind
+                listOf(
+                    Person("John", "Doe", 23),
+                    Person("Jenny", "Boe", 25)
+                )
+            ) { // with the mapper function to transform then to map <column -> value>
+                mapOf(
+                    // columns are easily accessible in this context
+                    // (the receiver is the RetableColumns object defined above)
+                    FIRST_NAME to it.firstName,
+                    LAST_NAME to it.lastName,
+                    AGE to it.age
+                )
             }
             // then we can just ask to write data
             .write(Retable.excel(columns) to File(pathTo("export_data_cols.xlsx")).outputStream())
@@ -251,33 +265,35 @@ class RetableExamplesTest {
     @Test
     fun `should export columns with local date example work`() {
         // we can also define typed columns with arbitrary indexes (or not)
-        val columns = object:RetableColumns() {
+        val columns = object : RetableColumns() {
             val NAME = string("name")
-            val START_DATE   = localDate("start_date")
-            val END_DATE   = localDate("end_date")
+            val START_DATE = localDate("start_date")
+            val END_DATE = localDate("end_date")
         }
         Retable(columns)
             .data(
-                    // we provide the data to write as either a list or a sequence
-                    // of any kind
-                    listOf(
-                            Event("So Good Fest",
-                                    LocalDate.parse("2020-06-05"),
-                                    LocalDate.parse("2020-06-06")
-                            ),
-                            Event("Les Fous-Cavés",
-                                    LocalDate.parse("2019-07-19"),
-                                    LocalDate.parse("2020-07-21")
-                            )
+                // we provide the data to write as either a list or a sequence
+                // of any kind
+                listOf(
+                    Event(
+                        "So Good Fest",
+                        LocalDate.parse("2020-06-05"),
+                        LocalDate.parse("2020-06-06")
+                    ),
+                    Event(
+                        "Les Fous-Cavés",
+                        LocalDate.parse("2019-07-19"),
+                        LocalDate.parse("2020-07-21")
                     )
-            ) {     // with the mapper function to transform then to map <column -> value>
-                    mapOf(
-                            // columns are easily accessible in this context
-                            // (the receiver is the RetableColumns object defined above)
-                            NAME to it.name,
-                            START_DATE to it.startDate,
-                            END_DATE to it.endDate
-                    )
+                )
+            ) { // with the mapper function to transform then to map <column -> value>
+                mapOf(
+                    // columns are easily accessible in this context
+                    // (the receiver is the RetableColumns object defined above)
+                    NAME to it.name,
+                    START_DATE to it.startDate,
+                    END_DATE to it.endDate
+                )
             }
             // then we can just ask to write data
             .write(Retable.excel(columns) to File(pathTo("export_data_cols_date.xlsx")).outputStream())
@@ -334,10 +350,8 @@ class RetableExamplesTest {
 //                    .write()
 //        }
 //    }
-
-
 }
 
-data class Person(val firstName:String, val lastName: String, val age:Int)
+data class Person(val firstName: String, val lastName: String, val age: Int)
 
 data class Event(val name: String, val startDate: LocalDate, val endDate: LocalDate)
