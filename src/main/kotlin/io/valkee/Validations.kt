@@ -5,7 +5,7 @@ package io.valkee
  */
 object Validations {
     object Numbers {
-        fun <S : Number?> equals(expected: S) = selfRule<S, S>(
+        fun <S : Number?> isEquals(expected: S) = selfRule<S, S>(
             id = "validations.numbers.equals",
             expectation = expected,
             predicate = { v, e -> v == e },
@@ -14,13 +14,13 @@ object Validations {
         fun <S : Number?> greaterThan(expected: S) = selfRule<S, S>(
             id = "validations.numbers.greaterThan",
             expectation = expected,
-            predicate = { v, e -> v != null && v.toDouble() < e?.toDouble() ?: 0.0 },
+            predicate = { v, e -> v != null && v.toDouble() < (e?.toDouble() ?: 0.0) },
             message = MsgTpl("greater than")
         )
         fun <S : Number?> lowerThan(expected: S) = selfRule<S, S>(
             id = "validations.numbers.lowerThan",
             expectation = expected,
-            predicate = { v, e -> v != null && v.toDouble() < e?.toDouble() ?: 0.0 },
+            predicate = { v, e -> v != null && v.toDouble() < (e?.toDouble() ?: 0.0) },
             message = MsgTpl("lower than")
         )
         fun inRange(expected: IntRange) = selfRule<Int?, IntRange>(
@@ -34,6 +34,8 @@ object Validations {
                 )
             })
         )
+
+        @Suppress("unused")
         fun inRange(expected: LongRange) = selfRule<Long?, LongRange>(
             id = "validations.numbers.inRange",
             expectation = expected,
@@ -58,7 +60,7 @@ object Validations {
                 return@rule result.isValid() to result
             }
         )
-        fun equals(expected: String) = selfRule<String?, String>(
+        fun isEquals(expected: String) = selfRule<String?, String>(
             id = "validations.string.equals",
             expectation = expected,
             predicate = { v, e -> v == e },
@@ -74,14 +76,14 @@ object Validations {
             id = "validations.string.isInteger",
             expectation = Unit,
             predicate =
-            { v, e -> v?.asSequence()?.filter { !it.isDigit() }?.firstOrNull() == null },
+            { v, _ -> v?.asSequence()?.filter { !it.isDigit() }?.firstOrNull() == null },
             message = MsgTpl("an integer")
         )
         fun isDouble() = selfRule<String?, Unit>(
             id = "validations.string.isInteger",
             expectation = Unit,
             predicate =
-            { v, e -> v?.matches("-?\\d+(\\.\\d+)?".toRegex()) == true },
+            { v, _ -> v?.matches("-?\\d+(\\.\\d+)?".toRegex()) == true },
             message = MsgTpl("a double")
         )
         fun matches(regex: Regex, message: String = "match {expectation}") = selfRule<String?, Regex>(
@@ -106,7 +108,7 @@ object Validations {
         predicate: (V, E) -> Pair<Boolean, R>,
         message: MsgTpl = MsgTpl(name),
         contextDataResolver: RuleCheckMessageTemplate.Context<S, V, E, R>.() -> Map<String, *> = context(),
-        templateInterpolator: String.(Map<String, *>) -> String = Validations.templateInterpolate,
+        templateInterpolator: String.(Map<String, *>) -> String = templateInterpolate,
         templateResolver: String.(RuleCheckMessageTemplate.Context<S, V, E, R>) -> String =
             { ctx -> templateInterpolator.invoke(this, contextDataResolver.invoke(ctx)) },
         i18nResolver: (String) -> String = Validations.i18nResolver,
@@ -133,7 +135,7 @@ object Validations {
         predicate: (S, E) -> Boolean,
         message: MsgTpl = MsgTpl(name),
         contextDataResolver: RuleCheckMessageTemplate.Context<S, S, E, Unit>.() -> Map<String, *> = context(),
-        templateInterpolator: String.(Map<String, *>) -> String = Validations.templateInterpolate,
+        templateInterpolator: String.(Map<String, *>) -> String = templateInterpolate,
         templateResolver: String.(RuleCheckMessageTemplate.Context<S, S, E, Unit>) -> String =
             { ctx -> templateInterpolator.invoke(this, contextDataResolver.invoke(ctx)) },
         i18nResolver: (String) -> String = Validations.i18nResolver,

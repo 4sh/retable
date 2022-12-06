@@ -72,7 +72,7 @@ class Retable<T : RetableColumns>(
     }
 }
 
-abstract class BaseSupport<T : RetableColumns, O : ReadOptions>(val columns: RetableColumns, open val options: O) {
+abstract class BaseSupport<T : RetableColumns, O : ReadOptions>(val columns: T, open val options: O) {
     abstract fun iterator(input: InputStream): Iterator<List<String>>
     abstract fun write(columns: T, records: Sequence<RetableRecord>, outputStream: OutputStream)
 
@@ -116,7 +116,7 @@ abstract class BaseSupport<T : RetableColumns, O : ReadOptions>(val columns: Ret
         }
 
         val violations: RetableViolations
-        val columns: RetableColumns
+        val columns: T
         if (options.firstRecordAsHeader) {
             val header = if (rawData.hasNext()) { rawData.next() } else { null }
             if (header == null) {
@@ -125,7 +125,11 @@ abstract class BaseSupport<T : RetableColumns, O : ReadOptions>(val columns: Ret
             val headers = Headers(header)
 
             if (this.columns == RetableColumns.auto) {
-                columns = RetableColumns.ofNames(headers.headers)
+                /*
+                If this.columns == RetableColumns.auto, then T is ListRetableColumns
+                 */
+                @Suppress("UNCHECKED_CAST")
+                columns = RetableColumns.ofNames(headers.headers) as T
                 violations = RetableViolations(listOf())
             } else {
                 columns = this.columns
@@ -139,7 +143,7 @@ abstract class BaseSupport<T : RetableColumns, O : ReadOptions>(val columns: Ret
         }
 
         return Retable(
-            columns as T,
+            columns,
             rawData.asSequence()
                 .mapIndexed { index, raw ->
                     val record = RetableRecord(columns, index + 1L, rawData.lineNumber, raw)
@@ -341,7 +345,10 @@ class DoubleRetableColumn(
  * Gives a column index using Excel like notation. eg A for 1, D for 4, AA for 27, ...
  */
 fun col(c: String): Int {
-    return c.toUpperCase().chars().map { (it - 'A'.toInt()) + 1 }.reduce { index, v -> index * 26 + v }.orElse(0)
+    return c.uppercase().chars()
+        .map { (it - 'A'.code) + 1 }
+        .reduce { index, v -> index * 26 + v }
+        .orElse(0)
 }
 
 data class RetableRecord(

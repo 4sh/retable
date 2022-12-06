@@ -82,17 +82,17 @@ class RetableExcelSupport<T : RetableColumns>(
             )
         }
 
-        records.forEachIndexed { index, record ->
+        records.forEach { record ->
             val row = sheet.createRow(record.lineNumber.toInt() - 1)
             columns.list().forEach { col ->
                 record[col]?.let { value ->
                     val cell = row.createCell(col.index - 1)
                     when (value) {
                         is Number -> {
-                            cell.setCellType(CellType.NUMERIC)
+                            cell.cellType = CellType.NUMERIC
                             cell.setCellValue(value.toDouble())
                         }
-                        is LocalDate -> writeLocalDateCell(workbook, cell, styleDate, value)
+                        is LocalDate -> writeLocalDateCell(cell, styleDate, value)
                         is Instant -> cell.setCellValue(Date(value.toEpochMilli()))
                         else -> {
                             val stringValue = value.toString()
@@ -117,7 +117,7 @@ class RetableExcelSupport<T : RetableColumns>(
         workbook.close()
     }
 
-    private fun writeLocalDateCell(workbook: XSSFWorkbook, cell: XSSFCell, style: XSSFCellStyle, value: LocalDate) {
+    private fun writeLocalDateCell(cell: XSSFCell, style: XSSFCellStyle, value: LocalDate) {
         cell.cellStyle = style
         val calendar = Calendar.getInstance()
         calendar.set(value.year, value.month.value, value.dayOfMonth, 0, 0, 0)
