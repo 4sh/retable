@@ -125,7 +125,7 @@ class RetableExcelSupport<T : RetableColumns>(
     }
 
     fun Cell.asStringValue(dateTimeFormatter: DateTimeFormatter?): String {
-        return when (this.cellTypeEnum) {
+        return when (this.cellType) {
             CellType.NUMERIC -> if (DateUtil.isCellDateFormatted(this)) {
                 val d = SimpleDateFormat("yyyy-MM-dd").format(this.dateCellValue)
                 return if (d == "1899-12-31") {
