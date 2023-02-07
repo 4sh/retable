@@ -10,8 +10,9 @@
 
 name: Publish package to the Maven Central Repository
 on:
-  release:
-    types: [created]
+  push:
+    tags:
+        - '*'
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -27,7 +28,9 @@ jobs:
       - name: Publish package
         uses: gradle/gradle-build-action@67421db6bd0bf253fb4bd25b31ebb98943c375e1
         with:
-          arguments: publish
+          arguments: publishExposedJarPublicationToOSSRHRepository
         env:
           MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-          MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}
+          MAVEN_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
+          SIGNING_KEY: ${{secrets.GPG_PRIVATE_KEY}}
+          SIGNING_KEY_PASSPHRASE: ${{secrets.GPG_PASSPHRASE}}
