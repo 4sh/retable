@@ -1,3 +1,5 @@
+import java.util.Base64
+
 object Versions {
     val junit = "5.2.0"
     val strikt = "0.34.0"
@@ -91,7 +93,9 @@ publishing {
 }
 
 signing {
-    val secretKey = System.getenv("SIGNING_KEY")
+    val secretKey = Base64.getDecoder()
+        .decode(System.getenv("SIGNING_KEY"))
+        .toString(Charsets.UTF_8)
     val passphrase = System.getenv("SIGNING_KEY_PASSPHRASE")
     @Suppress("UnstableApiUsage")
     useInMemoryPgpKeys(secretKey, passphrase)
