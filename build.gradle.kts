@@ -93,6 +93,14 @@ publishing {
 }
 
 signing {
+    if (System.getenv("SIGNING_KEY") == null) {
+        println("INFO - SIGNING_KEY undefined")
+        return@signing
+    }
+    if (System.getenv("SIGNING_KEY_PASSPHRASE") == null) {
+        println("INFO - SIGNING_KEY_PASSPHRASE undefined")
+        return@signing
+    }
     val secretKey = Base64.getDecoder()
         .decode(System.getenv("SIGNING_KEY"))
         .toString(Charsets.UTF_8)
