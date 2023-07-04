@@ -56,11 +56,15 @@ class RetableCSVSupport<T : RetableColumns>(
         val csvPrinter = CSVPrinter(
             OutputStreamWriter(outputStream),
             CSVFormat.Builder.create(format)
-                .setHeader(
-                    *sortedColumns
-                        .map { it.name }
-                        .toTypedArray()
-                )
+                .let { builder ->
+                    if (options.firstRecordAsHeader) {
+                        builder.setHeader(
+                            *sortedColumns
+                                .map { it.name }
+                                .toTypedArray()
+                        )
+                    } else builder
+                }
                 .build()
         )
 
