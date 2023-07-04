@@ -3,8 +3,7 @@ package io.retable
 import org.junit.jupiter.api.Test
 import strikt.api.Assertion
 import strikt.api.expectThat
-import strikt.assertions.containsExactly
-import strikt.assertions.isTrue
+import strikt.assertions.*
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.time.LocalDate
@@ -85,6 +84,44 @@ class RetableCSVTest {
 
         expectThat(File(resultFilePath)) {
             get { exists() }.isTrue()
+            get { readLines() }.isEqualTo(
+                listOf(
+                    "first_name,last_name,age",
+                    "John,Doe,23",
+                    "Jenny,Boe,25"
+                )
+            )
+        }
+    }
+
+    @Test
+    fun `should simple export work without headers`() {
+        val resultFilePath = pathTo("simple_export_test_result_no_header.csv")
+
+        Retable(
+            RetableColumns.ofNames(listOf("first_name", "last_name", "age"))
+        )
+            .data(
+                listOf(
+                    listOf("John", "Doe", 23),
+                    listOf("Jenny", "Boe", 25)
+                )
+            )
+            .write(
+                Retable.csv(
+                    CSVReadOptions(
+                        firstRecordAsHeader = false
+                    )
+                ) to File(resultFilePath).outputStream()
+            )
+
+        expectThat(File(resultFilePath)) {
+            get { exists() }.isTrue()
+            get { readLines() }.and {
+                get { firstOrNull() }
+                    .isNotNull()
+                    .isEqualTo("John,Doe,23")
+            }
         }
     }
 
