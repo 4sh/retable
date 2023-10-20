@@ -86,15 +86,15 @@ abstract class BaseSupport<T : RetableColumns, O : ReadOptions>(val columns: T, 
     fun read(input: InputStream): Retable<T> {
         val rawData = object : Iterator<List<String>> {
             val raw = iterator(input)
-            var nextConsume: Boolean = true
+            var nextConsumed: Boolean = true
             var next: List<String>? = null
             var lineNumber: Long = 0
 
             /**
-             * Check current value consumption ([nextConsume] is true) then process to check if iterator has next value and iterate to next value if it has. Set next value to null otherwise.
+             * Check current value consumption ([nextConsumed] is true) then process to check if iterator has next value and iterate to next value if it has. Set next value to null otherwise.
              */
             override fun hasNext(): Boolean {
-                if (nextConsume) {
+                if (nextConsumed) {
                     lineNumber++
                     next = if (raw.hasNext()) { raw.next() } else { null }
                     while (next != null && ignoreLine(next)) {
@@ -102,7 +102,7 @@ abstract class BaseSupport<T : RetableColumns, O : ReadOptions>(val columns: T, 
                         next = if (raw.hasNext()) { raw.next() } else { null }
                     }
                     if (next != null) {
-                        nextConsume = false
+                        nextConsumed = false
                     }
                 }
                 return next != null
@@ -116,13 +116,13 @@ abstract class BaseSupport<T : RetableColumns, O : ReadOptions>(val columns: T, 
 
             /**
              * Returns current value of iterator. Iterate to next value if current value is null.
-             * Acknowledge current value consumption when called. [nextConsume] is set to true
+             * Acknowledge current value consumption when called. [nextConsumed] is set to true
              */
             override fun next(): List<String> {
                 if (next == null) hasNext() // make sure hasNext has been called so that next is fetched
                 return (next ?: throw IllegalStateException("no more records"))
                     .map { if (options.trimValues) it.trim() else it }
-                    .also { nextConsume = true }
+                    .also { nextConsumed = true }
             }
         }
 
