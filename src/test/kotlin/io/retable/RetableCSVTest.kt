@@ -33,6 +33,45 @@ class RetableCSVTest {
     }
 
     @Test
+    fun `should not iterate to next record until iterator current value is consumed`() {
+        val csv = """
+            Prénom,Nom
+            Ñino,Dalton0
+            Ñino,Dalton1
+            Ñino,Dalton2
+            Ñino,Dalton3
+            Ñino,Dalton4
+        """.trimIndent()
+
+        val retable = Retable.csv(
+            options = CSVReadOptions(
+                charset = Charsets.ISO_8859_1
+            )
+        ).read(ByteArrayInputStream(csv.toByteArray(Charsets.ISO_8859_1)))
+
+        val iterator = retable.records.iterator()
+        val values = mutableListOf<RetableRecord>()
+
+        while (iterator.hasNext()) {
+            iterator.hasNext()
+            values.add(iterator.next())
+        }
+
+        val columns = RetableColumns.ofNames(listOf("Prénom", "Nom"))
+
+        expectThat(values) {
+            get { size }.isEqualTo(5)
+            containsExactly(
+                RetableRecord(columns, 1, 2, listOf("Ñino", "Dalton0")),
+                RetableRecord(columns, 2, 3, listOf("Ñino", "Dalton1")),
+                RetableRecord(columns, 3, 4, listOf("Ñino", "Dalton2")),
+                RetableRecord(columns, 4, 5, listOf("Ñino", "Dalton3")),
+                RetableRecord(columns, 5, 6, listOf("Ñino", "Dalton4")),
+            )
+        }
+    }
+
+    @Test
     fun `should parse csv with custom settings`() {
         val csv = """
             `Arthur `;` Rimbaud `;`Le dormeur du val ; 1870`
