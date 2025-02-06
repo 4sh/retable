@@ -2,10 +2,7 @@ package io.retable
 
 import org.apache.poi.common.usermodel.HyperlinkType
 import org.apache.poi.ss.usermodel.*
-import org.apache.poi.xssf.usermodel.XSSFCell
-import org.apache.poi.xssf.usermodel.XSSFCellStyle
-import org.apache.poi.xssf.usermodel.XSSFFont
-import org.apache.poi.xssf.usermodel.XSSFWorkbook
+import org.apache.poi.xssf.usermodel.*
 import java.io.InputStream
 import java.io.OutputStream
 import java.text.SimpleDateFormat
@@ -21,7 +18,8 @@ class ExcelReadOptions(
     trimValues: Boolean = true,
     ignoreEmptyLines: Boolean = true,
     firstRecordAsHeader: Boolean = true,
-    val defaultDateTimeFormatter: DateTimeFormatter? = null
+    val defaultDateTimeFormatter: DateTimeFormatter? = null,
+    val useExperimentalFasterAutoSizeColumn: Boolean = false
 ) : ReadOptions(trimValues, ignoreEmptyLines, firstRecordAsHeader)
 
 class RetableExcelSupport<T : RetableColumns>(
@@ -82,40 +80,65 @@ class RetableExcelSupport<T : RetableColumns>(
             )
         }
 
-        records.forEach { record ->
+        val maxColumnLength = records.map { record ->
             val row = sheet.createRow(record.lineNumber.toInt() - 1)
-            columns.list().forEach { col ->
-                record[col]?.let { value ->
-                    val cell = row.createCell(col.index - 1)
-                    when (value) {
-                        is Number -> {
-                            cell.cellType = CellType.NUMERIC
-                            cell.setCellValue(value.toDouble())
-                        }
-                        is LocalDate -> writeLocalDateCell(cell, styleDate, value)
-                        is Instant -> cell.setCellValue(Date(value.toEpochMilli()))
-                        else -> {
-                            val stringValue = value.toString()
-                            cell.setCellValue(stringValue)
-                            if (col.writeUrlAsHyperlink && stringValue.isUrl()) {
-                                cell.hyperlink = workbook.creationHelper.createHyperlink(HyperlinkType.URL)
-                                    .also { it.address = stringValue }
-                                cell.cellStyle = hyperlinkStyle
-                            } else {
-                                cell.cellStyle = styleText
-                            }
-                        }
-                    }
-                }
+            columns.list().map { col ->
+                createCell(record, col, row, workbook, styleDate, hyperlinkStyle, styleText)
             }
         }
 
-        for (index in 0..columns.maxIndex - 1) {
-            sheet.autoSizeColumn(index)
+        if (options.useExperimentalFasterAutoSizeColumn) {
+            sheet.autoSizeColumn(
+                maxColumnLength.reduce { acc, value ->
+                    acc.mapIndexed { index, length ->
+                        maxOf(length, value[index], Comparator.comparing(ColLength::length))
+                    }
+                }
+                    .toList()
+            )
+        } else {
+            maxColumnLength.toList()
+            for (index in 0 until columns.maxIndex) {
+                sheet.autoSizeColumn(index)
+            }
         }
+
         workbook.write(outputStream)
         workbook.close()
     }
+
+    private fun createCell(
+        record: RetableRecord,
+        col: RetableColumn<*>,
+        row: XSSFRow,
+        workbook: XSSFWorkbook,
+        styleDate: XSSFCellStyle,
+        hyperlinkStyle: XSSFCellStyle,
+        styleText: XSSFCellStyle
+    ): ColLength =
+        record[col]?.let { value ->
+            val cell = row.createCell(col.index - 1)
+            when (value) {
+                is Number -> {
+                    cell.cellType = CellType.NUMERIC
+                    cell.setCellValue(value.toDouble())
+                }
+                is LocalDate -> writeLocalDateCell(cell, styleDate, value)
+                is Instant -> cell.setCellValue(Date(value.toEpochMilli()))
+                else -> {
+                    val stringValue = value.toString()
+                    cell.setCellValue(stringValue)
+                    if (col.writeUrlAsHyperlink && stringValue.isUrl()) {
+                        cell.hyperlink = workbook.creationHelper.createHyperlink(HyperlinkType.URL)
+                            .also { it.address = stringValue }
+                        cell.cellStyle = hyperlinkStyle
+                    } else {
+                        cell.cellStyle = styleText
+                    }
+                }
+            }
+            ColLength(cell.columnIndex, cell.toString().length)
+        } ?: ColLength(col.index - 1, 0)
 
     private fun writeLocalDateCell(cell: XSSFCell, style: XSSFCellStyle, value: LocalDate) {
         cell.cellStyle = style
@@ -167,4 +190,17 @@ class RetableExcelSupport<T : RetableColumns>(
 
     private fun String.isUrl(): Boolean =
         take(7) == "http://" || take(8) == "https://"
+}
+
+data class ColLength(
+    val index: Int,
+    val length: Int
+)
+private fun Sheet.autoSizeColumn(maxColumnLength: List<ColLength>) {
+    maxColumnLength.forEach {
+        if (it.length > 0) {
+            val width = (it.length * 1.14388 * 256).toInt()
+            setColumnWidth(it.index, if (width > 255 * 256) 254 * 256 else width)
+        }
+    }
 }
