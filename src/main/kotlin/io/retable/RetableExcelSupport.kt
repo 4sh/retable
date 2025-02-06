@@ -199,7 +199,8 @@ data class ColLength(
 private fun Sheet.autoSizeColumn(maxColumnLength: List<ColLength>) {
     maxColumnLength.forEach {
         if (it.length > 0) {
-            setColumnWidth(it.index, (it.length * 1.14388 * 256).toInt())
+            val width = (it.length * 1.14388 * 256).toInt()
+            setColumnWidth(it.index, if (width > 255 * 256) 254 * 256 else width)
         }
     }
 }
