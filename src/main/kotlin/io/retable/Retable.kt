@@ -28,6 +28,7 @@ class Retable<T : RetableColumns>(
             }.asSequence()
         )
     }
+
     fun <V> data(values: List<V>, mapper: T.(it: V) -> Map<RetableColumn<out Any>, Any>): Retable<T> {
         return Retable(
             columns = this.columns,
@@ -229,9 +230,17 @@ abstract class RetableColumns {
         index: Int = c++,
         headerConstraint: (RetableColumn<String>) -> HeaderConstraint = HeaderConstraints.eq,
         writeUrlAsHyperlink: Boolean = true,
+        allowedValues: List<String>? = null,
         constraint: ValkeeBuilder<String>.() -> DataValueConstraint<String?, *> = { DataConstraints.none() }
     ) =
-        StringRetableColumn(index, name, headerConstraint, constraint.invoke(Valkee()), writeUrlAsHyperlink)
+        StringRetableColumn(
+            index,
+            name,
+            headerConstraint,
+            constraint.invoke(Valkee()),
+            writeUrlAsHyperlink,
+            allowedValues
+        )
 
     fun int(
         name: String,
@@ -317,9 +326,17 @@ class StringRetableColumn(
     name: String,
     headerConstraint: (RetableColumn<String>) -> HeaderConstraint,
     constraint: DataValueConstraint<String?, *>,
-    writeUrlAsHyperlink: Boolean = true
+    writeUrlAsHyperlink: Boolean = true,
+    val allowedValues: List<String>? = null
 ) :
-    RetableColumn<String>(index, name, headerConstraint, DataConstraints.none(), constraint, writeUrlAsHyperlink) {
+    RetableColumn<String>(
+        index,
+        name,
+        headerConstraint,
+        DataConstraints.none(),
+        constraint,
+        writeUrlAsHyperlink
+    ) {
     override fun getFromRaw(raw: String): String = raw
 }
 class IntRetableColumn(

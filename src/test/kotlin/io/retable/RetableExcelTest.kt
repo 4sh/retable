@@ -209,6 +209,27 @@ class RetableExcelTest {
         }
     }
 
+    @Test
+    fun `should export with defined value constraints`() {
+        val resultFilePath = pathTo("export_with_value_constraints.xlsx")
+        val columns = object : RetableColumns() {
+            val COMPANY = string("company_name", index = 1, allowedValues = listOf("Google", "4sh"))
+            val ENABLED = string("enabled", index = 2)
+        }
+        Retable(columns)
+            .data(
+                listOf(
+                    listOf("Google", "true"),
+                    listOf("4sh", "true")
+                )
+            )
+            .write(Retable.excel(columns) to File(resultFilePath).outputStream())
+
+        expectThat(File(resultFilePath)) {
+            get { exists() }.isTrue()
+        }
+    }
+
     // helper extensions
     fun String.resourceStream() = RetableTest::class.java.getResourceAsStream(this)
 }
