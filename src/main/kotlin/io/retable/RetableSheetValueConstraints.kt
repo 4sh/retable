@@ -11,6 +11,7 @@ import org.apache.poi.xssf.usermodel.XSSFSheet
  * Excel 255-character formula limit, falls back to a hidden sheet-based approach
  * ([buildHiddenSheetBasedValueValidations]).
  */
+
 fun XSSFSheet.withValueConstraints(options: ExcelReadOptions, columns: RetableColumns): XSSFSheet {
     val constrainedColumns = columns.list()
         .filterIsInstance<StringRetableColumn>()
