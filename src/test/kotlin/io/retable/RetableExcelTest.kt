@@ -210,17 +210,46 @@ class RetableExcelTest {
     }
 
     @Test
-    fun `should export with defined value constraints`() {
-        val resultFilePath = pathTo("export_with_value_constraints.xlsx")
+    fun `should export with defined std value constraints`() {
+        val resultFilePath = pathTo("export_with_std_value_constraints.xlsx")
         val columns = object : RetableColumns() {
             val COMPANY = string("company_name", index = 1, allowedValues = listOf("Google", "4sh"))
-            val ENABLED = string("enabled", index = 2)
+            val ENABLED = string("enabled", index = 2, allowedValues = listOf("true", "false"))
         }
         Retable(columns)
             .data(
                 listOf(
                     listOf("Google", "true"),
                     listOf("4sh", "true")
+                )
+            )
+            .write(Retable.excel(columns) to File(resultFilePath).outputStream())
+
+        expectThat(File(resultFilePath)) {
+            get { exists() }.isTrue()
+        }
+    }
+
+    @Test
+    fun `should export with defined sheet based value constraints`() {
+        val resultFilePath = pathTo("export_with_sheet_value_constraints.xlsx")
+        val columns = object : RetableColumns() {
+            val TRANSIT_TYPE = string("Type de trafic", allowedValues = listOf("IMPORT", "EXPORT"))
+            val SLOTTER = string("Affréteur", allowedValues = (1..500).map { "Slotter $it" })
+            val STOP_OVER = string("N° Escale IMPORT")
+            val BL = string("N° BL")
+            val FORWARDER = string("Transitaire / Réclamateur", allowedValues = (1..500).map { "Forwarder $it" })
+            val VALIDITY = string("Date fin de validité")
+        }
+        Retable(columns)
+            .data(
+                listOf(
+                    listOf("IMPORT", "Slotter 1", "", "", "Forwarder 1", "2021-01-01"),
+                    listOf("IMPORT", "Slotter 2", "", "", "Forwarder 2", "2021-01-01"),
+                    listOf("IMPORT", "Slotter 3", "", "", "Forwarder 3", "2021-01-01"),
+                    listOf("IMPORT", "Slotter 4", "", "", "Forwarder 4", "2021-01-01"),
+                    listOf("IMPORT", "Slotter 5", "", "", "Forwarder 5", "2021-01-01"),
+                    listOf("IMPORT", "Slotter 6", "", "", "Forwarder 6", "2021-01-01")
                 )
             )
             .write(Retable.excel(columns) to File(resultFilePath).outputStream())

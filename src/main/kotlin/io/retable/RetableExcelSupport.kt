@@ -81,8 +81,6 @@ class RetableExcelSupport<T : RetableColumns>(
             )
         }
 
-        sheet.setupValueConstraints(columns)
-
         val maxColumnLength = records.map { record ->
             val row = sheet.createRow(record.lineNumber.toInt() - 1)
             columns.list().map { col ->
@@ -105,6 +103,8 @@ class RetableExcelSupport<T : RetableColumns>(
                 sheet.autoSizeColumn(index)
             }
         }
+
+        sheet.withValueConstraints(options, columns)
 
         workbook.write(outputStream)
         workbook.close()
@@ -193,26 +193,6 @@ class RetableExcelSupport<T : RetableColumns>(
 
     private fun String.isUrl(): Boolean =
         take(7) == "http://" || take(8) == "https://"
-
-    private fun XSSFSheet.setupValueConstraints(columns: T) {
-        columns.list()
-            .filterIsInstance<StringRetableColumn>()
-            .filter { it.allowedValues.orEmpty().isNotEmpty() }
-            .forEach { column ->
-                val allowedValues = column.allowedValues.orEmpty()
-                val constraint = dataValidationHelper.createExplicitListConstraint(allowedValues.toTypedArray())
-                val cellRange = CellRangeAddressList(
-                    if (options.firstRecordAsHeader) 1 else 0,
-                    workbook.spreadsheetVersion.lastRowIndex,
-                    column.index - 1,
-                    column.index - 1
-                )
-                val validation = dataValidationHelper.createValidation(constraint, cellRange)
-                validation.showPromptBox = true
-                validation.suppressDropDownArrow = false
-                addValidationData(validation)
-            }
-    }
 }
 
 data class ColLength(

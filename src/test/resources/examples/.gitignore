@@ -6,7 +6,8 @@ export_data_cols.xlsx
 export_data_cols_date.csv
 export_data_cols_date.xlsx
 export_data_indexed_cols.csv
-export_with_value_constraints.xlsx
+export_with_std_value_constraints.xlsx
+export_with_sheet_value_constraints.xlsx
 export_with_hyperlink.xlsx
 export_with_raw_hyperlink.xlsx
 simple_export_test_result.csv
