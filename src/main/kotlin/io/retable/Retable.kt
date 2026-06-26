@@ -84,9 +84,11 @@ abstract class BaseSupport<T : RetableColumns, O : ReadOptions>(val columns: T, 
      * should be closed.
      *
      */
-    fun read(input: InputStream): Retable<T> {
+    fun read(input: InputStream): Retable<T> = read(iterator(input))
+
+    protected fun read(rawIterator: Iterator<List<String>>): Retable<T> {
         val rawData = object : Iterator<List<String>> {
-            val raw = iterator(input)
+            val raw = rawIterator
             var nextConsumed: Boolean = true
             var next: List<String>? = null
             var lineNumber: Long = 0
