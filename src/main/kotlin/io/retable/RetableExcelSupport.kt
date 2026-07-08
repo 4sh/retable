@@ -38,7 +38,6 @@ class RetableExcelSupport<T : RetableColumns>(
 
     private fun iteratorForSheet(sheet: Sheet): Iterator<List<String>> {
         val rowIterator = sheet.rowIterator()
-            ?: throw IllegalStateException("worksheet `${sheet.sheetName}` not found")
 
         return object : Iterator<List<String>> {
             override fun hasNext(): Boolean {
@@ -71,11 +70,17 @@ class RetableExcelSupport<T : RetableColumns>(
 
     fun readAll(input: InputStream): Map<String, Retable<T>> =
         WorkbookFactory.create(input).use { workbook ->
-            (0 until workbook.numberOfSheets).associate { i ->
-                val sheet = workbook.getSheetAt(i)
-                val retable = read(iteratorForSheet(sheet))
-                sheet.sheetName to Retable(retable.columns, retable.records.toList().asSequence(), retable.violations)
-            }
+            (0 until workbook.numberOfSheets)
+                .map { workbook.getSheetAt(it) }
+                .mapNotNull { sheet ->
+                    try {
+                        val retable = read(iteratorForSheet(sheet))
+                        sheet.sheetName to Retable(retable.columns, retable.records.toList().asSequence(), retable.violations)
+                    } catch (e: EmptyInputException) {
+                        null
+                    }
+                }
+                .toMap()
         }
 
     override fun write(columns: T, records: Sequence<RetableRecord>, outputStream: OutputStream) {
@@ -86,11 +91,13 @@ class RetableExcelSupport<T : RetableColumns>(
     }
 
     fun writeWorkbook(sheets: List<Pair<String, Retable<*>>>, outputStream: OutputStream) {
-        XSSFWorkbook().use { workbook ->
-            sheets.forEach { (sheetName, retable) ->
-                writeSheet(workbook, sheetName, retable.columns, retable.records)
+        outputStream.use { output ->
+            XSSFWorkbook().use { workbook ->
+                sheets.forEach { (sheetName, retable) ->
+                    writeSheet(workbook, sheetName, retable.columns, retable.records)
+                }
+                workbook.write(output)
             }
-            workbook.write(outputStream)
         }
     }
 
