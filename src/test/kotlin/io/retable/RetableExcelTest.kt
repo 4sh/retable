@@ -1,5 +1,6 @@
 package io.retable
 
+import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import org.junit.jupiter.api.Test
 import strikt.api.expectThat
 import strikt.assertions.*
@@ -257,6 +258,68 @@ class RetableExcelTest {
         expectThat(File(resultFilePath)) {
             get { exists() }.isTrue()
         }
+    }
+
+    @Test
+    fun `should list sheet names`() {
+        val names = Retable.excel().sheetNames("/worksheets.xlsx".resourceStream())
+        expectThat(names).isNotEmpty()
+        expectThat(names).contains("Last")
+    }
+
+    @Test
+    fun `should read all sheets`() {
+        val sheets = Retable.excel().readAll("/worksheets.xlsx".resourceStream())
+        expectThat(sheets).isNotEmpty()
+        val lastSheet = sheets["Last"]!!
+        expectThat(lastSheet.records.toList())
+            .hasSize(2)
+            .contains(RetableRecord(lastSheet.columns, 1, 2, listOf("Alfred", "Dalton")))
+    }
+
+    @Test
+    fun `should write workbook with multiple sheets`() {
+        val cols = RetableColumns.ofNames(listOf("first_name", "last_name"))
+        val sheet1 = Retable(cols).data(listOf(listOf("Xavier", "Hanin")))
+        val sheet2 = Retable(cols).data(listOf(listOf("Alfred", "Dalton")))
+
+        val resultPath = pathTo("multi_sheet_export.xlsx")
+        Retable.excel().writeWorkbook(
+            listOf("Feuille1" to sheet1, "Feuille2" to sheet2),
+            File(resultPath).outputStream()
+        )
+
+        val readBack = Retable.excel().readAll(File(resultPath).inputStream())
+        expectThat(readBack.keys.toList()).containsExactly("Feuille1", "Feuille2")
+        expectThat(readBack["Feuille1"]!!.records.toList()).hasSize(1)
+        expectThat(readBack["Feuille2"]!!.records.toList()).hasSize(1)
+    }
+
+    @Test
+    fun `should read all sheets ignoring empty sheets`() {
+        val resultPath = pathTo("multi_sheet_with_empty_sheet_export.xlsx")
+        XSSFWorkbook().use { workbook ->
+            workbook.createSheet("EmptySheet")
+            workbook.createSheet("BlankRowsSheet").also { blankSheet ->
+                // rows exist but have no non-blank cell: should be treated as empty too
+                blankSheet.createRow(0).createCell(0).setCellValue("")
+                blankSheet.createRow(1)
+            }
+            val dataSheet = workbook.createSheet("Feuille1")
+            dataSheet.createRow(0).also { header ->
+                header.createCell(0).setCellValue("first_name")
+                header.createCell(1).setCellValue("last_name")
+            }
+            dataSheet.createRow(1).also { row ->
+                row.createCell(0).setCellValue("Xavier")
+                row.createCell(1).setCellValue("Hanin")
+            }
+            File(resultPath).outputStream().use { workbook.write(it) }
+        }
+
+        val readBack = Retable.excel().readAll(File(resultPath).inputStream())
+        expectThat(readBack.keys.toList()).containsExactly("Feuille1")
+        expectThat(readBack["Feuille1"]!!.records.toList()).hasSize(1)
     }
 
     // helper extensions

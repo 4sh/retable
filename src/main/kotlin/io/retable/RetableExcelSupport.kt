@@ -27,12 +27,17 @@ class RetableExcelSupport<T : RetableColumns>(
     columns: T,
     options: ExcelReadOptions = ExcelReadOptions()
 ) : BaseSupport<T, ExcelReadOptions>(columns, options) {
+
     override fun iterator(input: InputStream): Iterator<List<String>> {
         val workbook = WorkbookFactory.create(input)
-        val sheet = if (options.sheetName != null) workbook.getSheet(options.sheetName)
-        else workbook.getSheetAt((options.sheetIndex ?: 1) - 1)
-        val rowIterator = sheet?.rowIterator()
+        val sheet = (if (options.sheetName != null) workbook.getSheet(options.sheetName)
+        else workbook.getSheetAt((options.sheetIndex ?: 1) - 1))
             ?: throw IllegalStateException("worksheet `${options.sheetName ?: options.sheetIndex ?: 1}` not found")
+        return iteratorForSheet(sheet)
+    }
+
+    private fun iteratorForSheet(sheet: Sheet): Iterator<List<String>> {
+        val rowIterator = sheet.rowIterator()
 
         return object : Iterator<List<String>> {
             override fun hasNext(): Boolean {
@@ -58,9 +63,51 @@ class RetableExcelSupport<T : RetableColumns>(
         }
     }
 
+    fun sheetNames(input: InputStream): List<String> =
+        WorkbookFactory.create(input).use { workbook ->
+            (0 until workbook.numberOfSheets).map { workbook.getSheetName(it) }
+        }
+
+    fun readAll(input: InputStream): Map<String, Retable<T>> =
+        WorkbookFactory.create(input).use { workbook ->
+            (0 until workbook.numberOfSheets)
+                .map { workbook.getSheetAt(it) }
+                .mapNotNull { sheet ->
+                    try {
+                        val retable = read(iteratorForSheet(sheet))
+                        sheet.sheetName to Retable(retable.columns, retable.records.toList().asSequence(), retable.violations)
+                    } catch (e: EmptyInputException) {
+                        null
+                    }
+                }
+                .toMap()
+        }
+
     override fun write(columns: T, records: Sequence<RetableRecord>, outputStream: OutputStream) {
-        val workbook = XSSFWorkbook()
-        val sheet = workbook.createSheet()
+        XSSFWorkbook().use { workbook ->
+            writeSheet(workbook, null, columns, records)
+            workbook.write(outputStream)
+        }
+    }
+
+    fun writeWorkbook(sheets: List<Pair<String, Retable<*>>>, outputStream: OutputStream) {
+        outputStream.use { output ->
+            XSSFWorkbook().use { workbook ->
+                sheets.forEach { (sheetName, retable) ->
+                    writeSheet(workbook, sheetName, retable.columns, retable.records)
+                }
+                workbook.write(output)
+            }
+        }
+    }
+
+    private fun writeSheet(
+        workbook: XSSFWorkbook,
+        sheetName: String?,
+        columns: RetableColumns,
+        records: Sequence<RetableRecord>
+    ) {
+        val sheet = if (sheetName != null) workbook.createSheet(sheetName) else workbook.createSheet()
 
         val header = sheet.createRow(0)
         columns.list().forEach {
@@ -105,9 +152,6 @@ class RetableExcelSupport<T : RetableColumns>(
         }
 
         sheet.withValueConstraints(options, columns)
-
-        workbook.write(outputStream)
-        workbook.close()
     }
 
     private fun createCell(

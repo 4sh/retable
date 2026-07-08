@@ -73,6 +73,8 @@ class Retable<T : RetableColumns>(
     }
 }
 
+class EmptyInputException(message: String) : IllegalStateException(message)
+
 abstract class BaseSupport<T : RetableColumns, O : ReadOptions>(val columns: T, open val options: O) {
     abstract fun iterator(input: InputStream): Iterator<List<String>>
     abstract fun write(columns: T, records: Sequence<RetableRecord>, outputStream: OutputStream)
@@ -84,9 +86,11 @@ abstract class BaseSupport<T : RetableColumns, O : ReadOptions>(val columns: T, 
      * should be closed.
      *
      */
-    fun read(input: InputStream): Retable<T> {
+    fun read(input: InputStream): Retable<T> = read(iterator(input))
+
+    protected fun read(rawIterator: Iterator<List<String>>): Retable<T> {
         val rawData = object : Iterator<List<String>> {
-            val raw = iterator(input)
+            val raw = rawIterator
             var nextConsumed: Boolean = true
             var next: List<String>? = null
             var lineNumber: Long = 0
@@ -136,7 +140,7 @@ abstract class BaseSupport<T : RetableColumns, O : ReadOptions>(val columns: T, 
         if (options.firstRecordAsHeader) {
             val header = if (rawData.hasNext()) { rawData.next() } else { null }
             if (header == null) {
-                throw IllegalStateException("empty file not allowed when first record is expected to be the header")
+                throw EmptyInputException("empty file not allowed when first record is expected to be the header")
             }
             val headers = Headers(header)
 
