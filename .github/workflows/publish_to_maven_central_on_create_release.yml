@@ -28,9 +28,18 @@ jobs:
       - name: Publish package
         uses: gradle/gradle-build-action@67421db6bd0bf253fb4bd25b31ebb98943c375e1
         with:
-          arguments: publishExposedJarPublicationToOSSRHRepository --stacktrace --info
+          arguments: publishExposedJarPublicationToOSSRHRepository
         env:
           MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
           SIGNING_KEY: ${{secrets.GPG_PRIVATE_KEY}}
           SIGNING_KEY_PASSPHRASE: ${{secrets.GPG_PASSPHRASE}}
+      - name: Finalize deployment on Central Portal
+        env:
+          MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+          MAVEN_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
+        run: |
+          TOKEN=$(printf '%s:%s' "$MAVEN_USERNAME" "$MAVEN_PASSWORD" | base64 -w0)
+          curl -sf -X POST \
+            -H "Authorization: Bearer $TOKEN" \
+            "https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/manual/upload/defaultRepository/io.github.4sh"
