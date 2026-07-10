@@ -93,10 +93,25 @@ publishing {
 }
 
 signing {
+    val rawSigningKey = System.getenv("SIGNING_KEY")
+    println("[signing debug] SIGNING_KEY env present: ${rawSigningKey != null}, raw length: ${rawSigningKey?.length}")
+
     val secretKey = Base64.getDecoder()
-        .decode(System.getenv("SIGNING_KEY"))
+        .decode(rawSigningKey)
         .toString(Charsets.UTF_8)
+
+    val lines = secretKey.lines()
+    println("[signing debug] decoded length: ${secretKey.length}")
+    println("[signing debug] decoded line count: ${lines.size}")
+    println("[signing debug] first non-blank line: ${lines.firstOrNull { it.isNotBlank() }}")
+    println("[signing debug] last non-blank line: ${lines.lastOrNull { it.isNotBlank() }}")
+    println("[signing debug] contains 'PRIVATE KEY': ${secretKey.contains("PRIVATE KEY")}")
+    println("[signing debug] contains 'PUBLIC KEY': ${secretKey.contains("PUBLIC KEY")}")
+    println("[signing debug] contains carriage return (\\r): ${secretKey.contains("\r")}")
+
     val passphrase = System.getenv("SIGNING_KEY_PASSPHRASE")
+    println("[signing debug] SIGNING_KEY_PASSPHRASE present: ${passphrase != null}, length: ${passphrase?.length}")
+
     @Suppress("UnstableApiUsage")
     useInMemoryPgpKeys(secretKey, passphrase)
     sign(publishing.publications["ExposedJar"])
