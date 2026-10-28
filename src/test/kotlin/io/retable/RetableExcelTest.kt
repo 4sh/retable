@@ -322,6 +322,107 @@ class RetableExcelTest {
         expectThat(readBack["Feuille1"]!!.records.toList()).hasSize(1)
     }
 
+    @Test
+    fun `should write same content with streaming workbook`() {
+        val columns = object : RetableColumns() {
+            val NAME = string("name", index = 1)
+            val AGE = int("age", index = 2)
+            val BIRTH = localDate("birth", index = 3)
+            val URL = string("url", index = 4)
+        }
+        val data = (1..1_000).map { listOf("Name $it", it, LocalDate.of(2000, 1, 1).plusDays(it.toLong()), "https://4sh.fr/$it") }
+        fun export(fileName: String, options: ExcelReadOptions): List<List<String>> {
+            val resultPath = pathTo(fileName)
+            Retable(columns)
+                .data(data) { mapOf(NAME to it[0], AGE to it[1], BIRTH to it[2], URL to it[3]) }
+                .write(Retable.excel(columns, options) to File(resultPath).outputStream())
+            return Retable.excel().read(File(resultPath).inputStream()).records.map { it.rawData }.toList()
+        }
+
+        val classic = export("export_classic.xlsx", ExcelReadOptions())
+        val streamed = export(
+            "export_streaming.xlsx",
+            ExcelReadOptions(useStreamingWorkbook = true, streamingRowAccessWindowSize = 10)
+        )
+        val streamedFasterAutoSize = export(
+            "export_streaming_faster_autosize.xlsx",
+            ExcelReadOptions(
+                useStreamingWorkbook = true,
+                streamingRowAccessWindowSize = 10,
+                useExperimentalFasterAutoSizeColumn = true
+            )
+        )
+
+        val expected = classic
+        expectThat(expected).hasSize(1_000)
+        expectThat(streamed).isEqualTo(expected)
+        expectThat(streamedFasterAutoSize).isEqualTo(expected)
+
+        XSSFWorkbook(File(pathTo("export_streaming.xlsx"))).use { workbook ->
+            val sheet = workbook.getSheetAt(0)
+            expectThat(sheet.getRow(1000).getCell(3).hyperlink?.address).isEqualTo("https://4sh.fr/1000")
+            expectThat(sheet.getColumnWidth(0)).isNotEqualTo(sheet.defaultColumnWidth * 256)
+        }
+    }
+
+    @Test
+    fun `should export sheet based value constraints with streaming workbook`() {
+        val resultFilePath = pathTo("export_with_sheet_value_constraints_streaming.xlsx")
+        val columns = object : RetableColumns() {
+            val SLOTTER = string("Affréteur", allowedValues = (1..500).map { "Slotter $it" })
+            val FORWARDER = string("Transitaire", allowedValues = (1..300).map { "Forwarder $it" })
+        }
+        Retable(columns)
+            .data(listOf(listOf("Slotter 1", "Forwarder 1")))
+            .write(
+                Retable.excel(columns, ExcelReadOptions(useStreamingWorkbook = true))
+                    to File(resultFilePath).outputStream()
+            )
+
+        XSSFWorkbook(File(resultFilePath)).use { workbook ->
+            expectThat(workbook.getSheetAt(0).dataValidations).hasSize(2)
+            val constraintSheet = workbook.getSheet("_constraints_Sheet0")
+            expectThat(workbook.isSheetHidden(workbook.getSheetIndex(constraintSheet))).isTrue()
+            expectThat(constraintSheet.getRow(499).getCell(0).stringCellValue).isEqualTo("Slotter 500")
+            expectThat(constraintSheet.getRow(299).getCell(1).stringCellValue).isEqualTo("Forwarder 300")
+            expectThat(constraintSheet.getRow(300).getCell(1)).isNull()
+        }
+    }
+
+    @Test
+    fun `should write workbook with multiple sheets with streaming workbook`() {
+        val cols = RetableColumns.ofNames(listOf("first_name", "last_name"))
+        val sheet1 = Retable(cols).data((1..300).map { listOf("Xavier $it", "Hanin") })
+        val sheet2 = Retable(cols).data(listOf(listOf("Alfred", "Dalton")))
+
+        val resultPath = pathTo("multi_sheet_streaming_export.xlsx")
+        Retable.excel(ExcelReadOptions(useStreamingWorkbook = true)).writeWorkbook(
+            listOf("Feuille1" to sheet1, "Feuille2" to sheet2),
+            File(resultPath).outputStream()
+        )
+
+        val readBack = Retable.excel().readAll(File(resultPath).inputStream())
+        expectThat(readBack.keys.toList()).containsExactly("Feuille1", "Feuille2")
+        expectThat(readBack["Feuille1"]!!.records.toList()).hasSize(300)
+        expectThat(readBack["Feuille2"]!!.records.toList()).hasSize(1)
+    }
+
+    @Test
+    fun `should export empty records with faster autosize`() {
+        val resultPath = pathTo("export_empty_faster_autosize.xlsx")
+        val cols = RetableColumns.ofNames(listOf("first_name", "last_name"))
+        Retable(cols)
+            .data(emptyList<List<String>>())
+            .write(
+                Retable.excel(cols, ExcelReadOptions(useExperimentalFasterAutoSizeColumn = true))
+                    to File(resultPath).outputStream()
+            )
+
+        XSSFWorkbook(File(resultPath)).use { workbook ->
+            expectThat(workbook.getSheetAt(0).lastRowNum).isEqualTo(0)
+        }
+    }
+
     // helper extensions
     fun String.resourceStream() = RetableTest::class.java.getResourceAsStream(this)
 }

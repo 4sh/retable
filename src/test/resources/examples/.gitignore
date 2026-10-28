@@ -12,3 +12,9 @@ export_with_hyperlink.xlsx
 export_with_raw_hyperlink.xlsx
 simple_export_test_result.csv
 simple_export_test_result_no_header.csv
+export_classic.xlsx
+export_streaming.xlsx
+export_streaming_faster_autosize.xlsx
+export_with_sheet_value_constraints_streaming.xlsx
+multi_sheet_streaming_export.xlsx
+export_empty_faster_autosize.xlsx

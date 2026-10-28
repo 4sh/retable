@@ -1,8 +1,8 @@
 package io.retable
 
 import org.apache.poi.ss.usermodel.DataValidation
+import org.apache.poi.ss.usermodel.Sheet
 import org.apache.poi.ss.util.CellRangeAddressList
-import org.apache.poi.xssf.usermodel.XSSFSheet
 
 /**
  * Sets up Excel data validation (dropdown lists) for all [StringRetableColumn]s that define allowed values.
@@ -12,7 +12,7 @@ import org.apache.poi.xssf.usermodel.XSSFSheet
  * ([buildHiddenSheetBasedValueValidations]).
  */
 
-fun XSSFSheet.withValueConstraints(options: ExcelReadOptions, columns: RetableColumns): XSSFSheet {
+fun Sheet.withValueConstraints(options: ExcelReadOptions, columns: RetableColumns): Sheet {
     val constrainedColumns = columns.list()
         .filterIsInstance<StringRetableColumn>()
         .filter { it.allowedValues.orEmpty().isNotEmpty() }
@@ -32,7 +32,7 @@ fun XSSFSheet.withValueConstraints(options: ExcelReadOptions, columns: RetableCo
     return this
 }
 
-private fun XSSFSheet.buildStdValueValidations(
+private fun Sheet.buildStdValueValidations(
     options: ExcelReadOptions,
     columns: List<StringRetableColumn>
 ): List<DataValidation> =
@@ -55,7 +55,7 @@ private fun XSSFSheet.buildStdValueValidations(
             }
     }
 
-private fun XSSFSheet.buildHiddenSheetBasedValueValidations(
+private fun Sheet.buildHiddenSheetBasedValueValidations(
     options: ExcelReadOptions,
     columns: List<StringRetableColumn>
 ): List<DataValidation> {
@@ -64,16 +64,20 @@ private fun XSSFSheet.buildHiddenSheetBasedValueValidations(
     val constraintSheetIndex = workbook.getSheetIndex(constraintSheet)
     workbook.setSheetHidden(constraintSheetIndex, true)
 
+    // rows are written in ascending order, once each, as required by streaming (SXSSF) sheets
+    val maxAllowedValues = columns.maxOf { it.allowedValues.orEmpty().size }
+    for (rowIndex in 0 until maxAllowedValues) {
+        val row = constraintSheet.createRow(rowIndex)
+        columns.forEach { column ->
+            column.allowedValues.orEmpty().getOrNull(rowIndex)
+                ?.let { row.createCell(column.index - 1).setCellValue(it) }
+        }
+    }
+
     return columns.map { column ->
         val columnIndex = column.index - 1
 
         val allowedValues = column.allowedValues.orEmpty()
-        allowedValues.forEachIndexed { rowIndex, value ->
-            val row = constraintSheet.getRow(rowIndex)
-                ?: constraintSheet.createRow(rowIndex)
-            row.createCell(columnIndex).setCellValue(value)
-        }
-
         val rangeName = "${constraintSheetName}_${columnIndex}"
         val lastRow = allowedValues.size
         val colLetter = columnIndexToLetter(columnIndex)
