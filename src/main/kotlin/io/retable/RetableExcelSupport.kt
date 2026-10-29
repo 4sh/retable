@@ -182,7 +182,8 @@ class RetableExcelSupport<T : RetableColumns>(
             }
                 ?.let { sheet.autoSizeColumn(it) }
         } else {
-            // consumes the records without keeping the computed lengths
+            // maxColumnLength is lazy: consuming it is what creates the rows. The computed lengths are not
+            // needed here, they are not kept (POI measures the cells itself)
             maxColumnLength.forEach { }
             for (index in 0 until columns.maxIndex) {
                 sheet.autoSizeColumn(index)
