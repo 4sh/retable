@@ -286,6 +286,8 @@ By default the whole workbook is built in memory before being written (POI `XSSF
 several GB for a few hundred thousand rows. With `useStreamingWorkbook` the POI streaming API (`SXSSFWorkbook`) is used:
 only the last `streamingRowAccessWindowSize` rows (100 by default) are kept in memory, the others are flushed to a
 temporary file which is deleted once the workbook is written.
+These temporary files are not compressed by default; on large exports with little disk space (`java.io.tmpdir`),
+`compressStreamingTempFiles = true` gzips them at the cost of some CPU.
 
 ```kotlin
         Retable(columns)

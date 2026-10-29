@@ -27,7 +27,9 @@ class ExcelReadOptions(
     // memory, the others are flushed to a temporary file. Records must be written in ascending line order.
     // Hyperlinks are not flushed: POI keeps all of them in memory until the workbook is written.
     val useStreamingWorkbook: Boolean = false,
-    val streamingRowAccessWindowSize: Int = SXSSFWorkbook.DEFAULT_WINDOW_SIZE
+    val streamingRowAccessWindowSize: Int = SXSSFWorkbook.DEFAULT_WINDOW_SIZE,
+    // gzip the streaming temporary files: less disk space, more CPU
+    val compressStreamingTempFiles: Boolean = false
 ) : ReadOptions(trimValues, ignoreEmptyLines, firstRecordAsHeader)
 
 class RetableExcelSupport<T : RetableColumns>(
@@ -110,8 +112,11 @@ class RetableExcelSupport<T : RetableColumns>(
 
     private fun withWorkbook(block: (Workbook) -> Unit) {
         val workbook =
-            if (options.useStreamingWorkbook) SXSSFWorkbook(options.streamingRowAccessWindowSize)
-            else XSSFWorkbook()
+            if (options.useStreamingWorkbook) {
+                SXSSFWorkbook(null, options.streamingRowAccessWindowSize, options.compressStreamingTempFiles)
+            } else {
+                XSSFWorkbook()
+            }
         try {
             workbook.use(block)
         } finally {

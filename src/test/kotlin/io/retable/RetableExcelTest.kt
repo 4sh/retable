@@ -410,6 +410,28 @@ class RetableExcelTest {
     }
 
     @Test
+    fun `should write with compressed streaming temp files`() {
+        val cols = RetableColumns.ofNames(listOf("first_name", "last_name"))
+        val resultPath = pathTo("export_streaming_compressed.xlsx")
+        Retable(cols)
+            .data((1..300).map { listOf("Xavier $it", "Hanin") })
+            .write(
+                Retable.excel(
+                    cols,
+                    ExcelReadOptions(
+                        useStreamingWorkbook = true,
+                        streamingRowAccessWindowSize = 10,
+                        compressStreamingTempFiles = true
+                    )
+                ) to File(resultPath).outputStream()
+            )
+
+        val records = Retable.excel().read(File(resultPath).inputStream()).records.toList()
+        expectThat(records).hasSize(300)
+        expectThat(records.last().rawData).containsExactly("Xavier 300", "Hanin")
+    }
+
+    @Test
     fun `should reject out of order records with streaming workbook`() {
         val cols = RetableColumns.ofNames(listOf("first_name", "last_name"))
         val records = Retable(cols).data(listOf(listOf("Xavier", "Hanin"), listOf("Alfred", "Dalton"))).records
