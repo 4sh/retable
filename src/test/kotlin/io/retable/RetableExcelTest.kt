@@ -1,5 +1,7 @@
 package io.retable
 
+import org.apache.poi.util.DefaultTempFileCreationStrategy
+import org.apache.poi.util.TempFile
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import org.junit.jupiter.api.Test
 import strikt.api.expectThat
@@ -7,6 +9,7 @@ import strikt.api.expectThrows
 import strikt.assertions.*
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.nio.file.Files
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -360,9 +363,17 @@ class RetableExcelTest {
         expectThat(streamed).isEqualTo(expected)
         expectThat(streamedFasterAutoSize).isEqualTo(expected)
 
+        val classicWidths = XSSFWorkbook(File(pathTo("export_classic.xlsx"))).use { workbook ->
+            (0..3).map { workbook.getSheetAt(0).getColumnWidth(it) }
+        }
         XSSFWorkbook(File(pathTo("export_streaming.xlsx"))).use { workbook ->
             val sheet = workbook.getSheetAt(0)
             expectThat(sheet.getRow(1000).getCell(3).hyperlink?.address).isEqualTo("https://4sh.fr/1000")
+            // POI autosize on tracked columns gives the same widths as on a whole in memory sheet,
+            // give or take 1/256 of a character (POI rounds differently in SXSSF)
+            (0..3).forEach { index ->
+                expectThat(sheet.getColumnWidth(index)).isIn(classicWidths[index] - 1..classicWidths[index] + 1)
+            }
             expectThat(sheet.getColumnWidth(0)).isNotEqualTo(sheet.defaultColumnWidth * 256)
         }
     }
@@ -429,6 +440,28 @@ class RetableExcelTest {
         val records = Retable.excel().read(File(resultPath).inputStream()).records.toList()
         expectThat(records).hasSize(300)
         expectThat(records.last().rawData).containsExactly("Xavier 300", "Hanin")
+    }
+
+    @Test
+    fun `should delete streaming temp files once written`() {
+        val tempDir = Files.createTempDirectory("retable-sxssf").toFile()
+        TempFile.setTempFileCreationStrategy(DefaultTempFileCreationStrategy(tempDir))
+        try {
+            val cols = RetableColumns.ofNames(listOf("first_name", "last_name"))
+            val records = Retable(cols).data((1..300).map { listOf("Xavier $it", "Hanin") }).records
+            var tempFilesWhileWriting = 0
+            Retable(cols, records.onEach { if (it.recordNumber == 300L) tempFilesWhileWriting = tempDir.list()!!.size })
+                .write(
+                    Retable.excel(cols, ExcelReadOptions(useStreamingWorkbook = true, streamingRowAccessWindowSize = 10))
+                        to ByteArrayOutputStream()
+                )
+
+            expectThat(tempFilesWhileWriting).isGreaterThan(0)
+            expectThat(tempDir.list()!!.toList()).isEmpty()
+        } finally {
+            TempFile.setTempFileCreationStrategy(DefaultTempFileCreationStrategy())
+            tempDir.deleteRecursively()
+        }
     }
 
     @Test
