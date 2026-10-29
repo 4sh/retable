@@ -25,6 +25,7 @@ class ExcelReadOptions(
     val useExperimentalFasterAutoSizeColumn: Boolean = false,
     // write xlsx with POI streaming API (SXSSF): only the last `streamingRowAccessWindowSize` rows are kept in
     // memory, the others are flushed to a temporary file. Records must be written in ascending line order.
+    // Hyperlinks are not flushed: POI keeps all of them in memory until the workbook is written.
     val useStreamingWorkbook: Boolean = false,
     val streamingRowAccessWindowSize: Int = SXSSFWorkbook.DEFAULT_WINDOW_SIZE
 ) : ReadOptions(trimValues, ignoreEmptyLines, firstRecordAsHeader)

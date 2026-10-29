@@ -300,6 +300,9 @@ temporary file which is deleted once the workbook is written.
 Records must be written in ascending line order, which is always the case when the data is provided through `data(...)`
 or read with retable. Out of order records (e.g. after a `sortedBy`) are rejected with an `IllegalArgumentException`.
 
+Hyperlinks (`writeUrlAsHyperlink` columns) are not streamed: POI keeps every hyperlink of the sheet in memory until
+the workbook is written, so memory still grows with the number of rows holding a URL.
+
 ## Installation
 
 retable has not been released yet, but you can use jitpack to obtain it:
