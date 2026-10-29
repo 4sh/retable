@@ -12,7 +12,7 @@ import org.apache.poi.ss.util.CellRangeAddressList
  * ([buildHiddenSheetBasedValueValidations]).
  */
 
-fun Sheet.withValueConstraints(options: ExcelReadOptions, columns: RetableColumns): Sheet {
+fun <S : Sheet> S.withValueConstraints(options: ExcelReadOptions, columns: RetableColumns): S {
     val constrainedColumns = columns.list()
         .filterIsInstance<StringRetableColumn>()
         .filter { it.allowedValues.orEmpty().isNotEmpty() }
