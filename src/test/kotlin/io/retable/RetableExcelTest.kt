@@ -3,7 +3,9 @@ package io.retable
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import org.junit.jupiter.api.Test
 import strikt.api.expectThat
+import strikt.api.expectThrows
 import strikt.assertions.*
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -405,6 +407,20 @@ class RetableExcelTest {
         expectThat(readBack.keys.toList()).containsExactly("Feuille1", "Feuille2")
         expectThat(readBack["Feuille1"]!!.records.toList()).hasSize(300)
         expectThat(readBack["Feuille2"]!!.records.toList()).hasSize(1)
+    }
+
+    @Test
+    fun `should reject out of order records with streaming workbook`() {
+        val cols = RetableColumns.ofNames(listOf("first_name", "last_name"))
+        val records = Retable(cols).data(listOf(listOf("Xavier", "Hanin"), listOf("Alfred", "Dalton"))).records
+        val unordered = Retable(cols, records.toList().reversed().asSequence())
+
+        // both rows still fit in the row access window: POI alone would not fail here
+        expectThrows<IllegalArgumentException> {
+            unordered.write(
+                Retable.excel(cols, ExcelReadOptions(useStreamingWorkbook = true)) to ByteArrayOutputStream()
+            )
+        }.message.isNotNull().contains("ascending line order")
     }
 
     @Test

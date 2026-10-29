@@ -150,8 +150,19 @@ class RetableExcelSupport<T : RetableColumns>(
             )
         }
 
+        var previousRowIndex = -1
         val maxColumnLength = records.map { record ->
-            val row = sheet.createRow(record.lineNumber.toInt() - 1)
+            val rowIndex = record.lineNumber.toInt() - 1
+            if (sheet is SXSSFSheet) {
+                // POI only fails once the previous row has been flushed, which depends on the data volume:
+                // fail on any out of order record instead
+                require(rowIndex > previousRowIndex) {
+                    "streaming workbook requires records in ascending line order, " +
+                        "got line ${record.lineNumber} after line ${previousRowIndex + 1}"
+                }
+                previousRowIndex = rowIndex
+            }
+            val row = sheet.createRow(rowIndex)
             columns.list().map { col ->
                 createCell(record, col, row, workbook, styleDate, hyperlinkStyle, styleText)
             }

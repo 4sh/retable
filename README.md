@@ -297,7 +297,8 @@ temporary file which is deleted once the workbook is written.
             )) to outputStream)
 ```
 
-Records must be written in ascending line order, which is always the case when the data is provided through `data(...)`.
+Records must be written in ascending line order, which is always the case when the data is provided through `data(...)`
+or read with retable. Out of order records (e.g. after a `sortedBy`) are rejected with an `IllegalArgumentException`.
 
 ## Installation
 
