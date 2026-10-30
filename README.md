@@ -280,6 +280,31 @@ Note: Only basic Excel write is supported yet
              */
 ```
 
+### Large Excel exports (streaming)
+
+By default the whole workbook is built in memory before being written (POI `XSSFWorkbook`), which can take
+several GB for a few hundred thousand rows. With `useStreamingWorkbook` the POI streaming API (`SXSSFWorkbook`) is used:
+only the last `streamingRowAccessWindowSize` rows (100 by default) are kept in memory, the others are flushed to a
+temporary file which is deleted once the workbook is written.
+These temporary files are not compressed by default; on large exports with little disk space (`java.io.tmpdir`),
+`compressStreamingTempFiles = true` gzips them at the cost of some CPU.
+
+```kotlin
+        Retable(columns)
+            .data(records)
+            .write(Retable.excel(columns, ExcelReadOptions(
+                useStreamingWorkbook = true,
+                // recommended on large exports: POI autosize measures every cell with font metrics
+                useExperimentalFasterAutoSizeColumn = true
+            )) to outputStream)
+```
+
+Records must be written in ascending line order, which is always the case when the data is provided through `data(...)`
+or read with retable. Out of order records (e.g. after a `sortedBy`) are rejected with an `IllegalArgumentException`.
+
+Hyperlinks (`writeUrlAsHyperlink` columns) are not streamed: POI keeps every hyperlink of the sheet in memory until
+the workbook is written, so memory still grows with the number of rows holding a URL.
+
 ## Installation
 
 retable has not been released yet, but you can use jitpack to obtain it:

@@ -3,6 +3,8 @@ package io.retable
 import org.apache.poi.common.usermodel.HyperlinkType
 import org.apache.poi.ss.usermodel.*
 import org.apache.poi.ss.util.CellRangeAddressList
+import org.apache.poi.xssf.streaming.SXSSFSheet
+import org.apache.poi.xssf.streaming.SXSSFWorkbook
 import org.apache.poi.xssf.usermodel.*
 import java.io.InputStream
 import java.io.OutputStream
@@ -20,7 +22,14 @@ class ExcelReadOptions(
     ignoreEmptyLines: Boolean = true,
     firstRecordAsHeader: Boolean = true,
     val defaultDateTimeFormatter: DateTimeFormatter? = null,
-    val useExperimentalFasterAutoSizeColumn: Boolean = false
+    val useExperimentalFasterAutoSizeColumn: Boolean = false,
+    // write xlsx with POI streaming API (SXSSF): only the last `streamingRowAccessWindowSize` rows are kept in
+    // memory, the others are flushed to a temporary file. Records must be written in ascending line order.
+    // Hyperlinks are not flushed: POI keeps all of them in memory until the workbook is written.
+    val useStreamingWorkbook: Boolean = false,
+    val streamingRowAccessWindowSize: Int = SXSSFWorkbook.DEFAULT_WINDOW_SIZE,
+    // gzip the streaming temporary files: less disk space, more CPU
+    val compressStreamingTempFiles: Boolean = false
 ) : ReadOptions(trimValues, ignoreEmptyLines, firstRecordAsHeader)
 
 class RetableExcelSupport<T : RetableColumns>(
@@ -84,7 +93,7 @@ class RetableExcelSupport<T : RetableColumns>(
         }
 
     override fun write(columns: T, records: Sequence<RetableRecord>, outputStream: OutputStream) {
-        XSSFWorkbook().use { workbook ->
+        withWorkbook { workbook ->
             writeSheet(workbook, null, columns, records)
             workbook.write(outputStream)
         }
@@ -92,7 +101,7 @@ class RetableExcelSupport<T : RetableColumns>(
 
     fun writeWorkbook(sheets: List<Pair<String, Retable<*>>>, outputStream: OutputStream) {
         outputStream.use { output ->
-            XSSFWorkbook().use { workbook ->
+            withWorkbook { workbook ->
                 sheets.forEach { (sheetName, retable) ->
                     writeSheet(workbook, sheetName, retable.columns, retable.records)
                 }
@@ -101,16 +110,37 @@ class RetableExcelSupport<T : RetableColumns>(
         }
     }
 
+    private fun withWorkbook(block: (Workbook) -> Unit) {
+        val workbook =
+            if (options.useStreamingWorkbook) {
+                SXSSFWorkbook(null, options.streamingRowAccessWindowSize, options.compressStreamingTempFiles)
+            } else {
+                XSSFWorkbook()
+            }
+        try {
+            workbook.use(block)
+        } finally {
+            // deletes the temporary files backing the flushed rows
+            (workbook as? SXSSFWorkbook)?.dispose()
+        }
+    }
+
     private fun writeSheet(
-        workbook: XSSFWorkbook,
+        workbook: Workbook,
         sheetName: String?,
         columns: RetableColumns,
         records: Sequence<RetableRecord>
     ) {
         val sheet = if (sheetName != null) workbook.createSheet(sheetName) else workbook.createSheet()
+        if (sheet is SXSSFSheet && !options.useExperimentalFasterAutoSizeColumn) {
+            // flushed rows are no longer reachable by autoSizeColumn, widths must be tracked while writing
+            sheet.trackAllColumnsForAutoSizing()
+        }
 
+        // columns.list() goes through reflection: computed once, not for each record
+        val columnList = columns.list()
         val header = sheet.createRow(0)
-        columns.list().forEach {
+        columnList.forEach {
             val cell = header.createCell(it.index - 1)
             cell.setCellValue(it.name)
         }
@@ -122,30 +152,41 @@ class RetableExcelSupport<T : RetableColumns>(
         val hyperlinkStyle = workbook.createCellStyle().also { style ->
             style.setFont(
                 workbook.createFont().also {
-                    it.underline = XSSFFont.U_SINGLE
+                    it.underline = Font.U_SINGLE
                     it.color = IndexedColors.BLUE.index
                 }
             )
         }
 
+        var previousRowIndex = -1
         val maxColumnLength = records.map { record ->
-            val row = sheet.createRow(record.lineNumber.toInt() - 1)
-            columns.list().map { col ->
+            val rowIndex = record.lineNumber.toInt() - 1
+            if (sheet is SXSSFSheet) {
+                // POI only fails once the previous row has been flushed, which depends on the data volume:
+                // fail on any out of order record instead
+                require(rowIndex > previousRowIndex) {
+                    "streaming workbook requires records in ascending line order, " +
+                        "got line ${record.lineNumber} after line ${previousRowIndex + 1}"
+                }
+                previousRowIndex = rowIndex
+            }
+            val row = sheet.createRow(rowIndex)
+            columnList.map { col ->
                 createCell(record, col, row, workbook, styleDate, hyperlinkStyle, styleText)
             }
         }
 
         if (options.useExperimentalFasterAutoSizeColumn) {
-            sheet.autoSizeColumn(
-                maxColumnLength.reduce { acc, value ->
-                    acc.mapIndexed { index, length ->
-                        maxOf(length, value[index], Comparator.comparing(ColLength::length))
-                    }
+            maxColumnLength.reduceOrNull { acc, value ->
+                acc.mapIndexed { index, length ->
+                    maxOf(length, value[index], Comparator.comparing(ColLength::length))
                 }
-                    .toList()
-            )
+            }
+                ?.let { sheet.autoSizeColumn(it) }
         } else {
-            maxColumnLength.toList()
+            // maxColumnLength is lazy: consuming it is what creates the rows. The computed lengths are not
+            // needed here, they are not kept (POI measures the cells itself)
+            maxColumnLength.forEach { }
             for (index in 0 until columns.maxIndex) {
                 sheet.autoSizeColumn(index)
             }
@@ -157,11 +198,11 @@ class RetableExcelSupport<T : RetableColumns>(
     private fun createCell(
         record: RetableRecord,
         col: RetableColumn<*>,
-        row: XSSFRow,
-        workbook: XSSFWorkbook,
-        styleDate: XSSFCellStyle,
-        hyperlinkStyle: XSSFCellStyle,
-        styleText: XSSFCellStyle
+        row: Row,
+        workbook: Workbook,
+        styleDate: CellStyle,
+        hyperlinkStyle: CellStyle,
+        styleText: CellStyle
     ): ColLength =
         record[col]?.let { value ->
             val cell = row.createCell(col.index - 1)
@@ -187,7 +228,7 @@ class RetableExcelSupport<T : RetableColumns>(
             ColLength(cell.columnIndex, cell.toString().length)
         } ?: ColLength(col.index - 1, 0)
 
-    private fun writeLocalDateCell(cell: XSSFCell, style: XSSFCellStyle, value: LocalDate) {
+    private fun writeLocalDateCell(cell: Cell, style: CellStyle, value: LocalDate) {
         cell.cellStyle = style
         val calendar = Calendar.getInstance()
         calendar.set(value.year, value.month.value, value.dayOfMonth, 0, 0, 0)

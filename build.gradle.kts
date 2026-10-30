@@ -27,9 +27,24 @@ repositories {
     mavenCentral()
 }
 
-tasks.getByPath("test").doFirst {
-    with(this as Test) {
-        useJUnitPlatform()
+tasks.test {
+    useJUnitPlatform {
+        excludeTags("perf")
+    }
+}
+
+// performance tests, run with a small heap to catch memory regressions: ./gradlew perfTest
+val perfTest by tasks.registering(Test::class) {
+    description = "Runs performance tests with a 256 MB heap"
+    group = "verification"
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    useJUnitPlatform {
+        includeTags("perf")
+    }
+    maxHeapSize = "256m"
+    testLogging {
+        showStandardStreams = true
     }
 }
 
