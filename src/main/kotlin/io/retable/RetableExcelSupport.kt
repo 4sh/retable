@@ -137,8 +137,10 @@ class RetableExcelSupport<T : RetableColumns>(
             sheet.trackAllColumnsForAutoSizing()
         }
 
+        // columns.list() goes through reflection: computed once, not for each record
+        val columnList = columns.list()
         val header = sheet.createRow(0)
-        columns.list().forEach {
+        columnList.forEach {
             val cell = header.createCell(it.index - 1)
             cell.setCellValue(it.name)
         }
@@ -169,7 +171,7 @@ class RetableExcelSupport<T : RetableColumns>(
                 previousRowIndex = rowIndex
             }
             val row = sheet.createRow(rowIndex)
-            columns.list().map { col ->
+            columnList.map { col ->
                 createCell(record, col, row, workbook, styleDate, hyperlinkStyle, styleText)
             }
         }
